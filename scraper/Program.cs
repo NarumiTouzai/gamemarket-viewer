@@ -1,9 +1,11 @@
 // ゲームマーケット公式サイトのブース一覧を取得して JSON にまとめるツール
 //
 //   dotnet run --project scraper -- [--event 2026a] [--out docs/data/booths.json]
-//                                   [--refresh] [--no-details] [--delay 700] [--max-pages N]
+//                                   [--refresh] [--stale-days 2] [--max-refetch 700] [--no-details] [--delay 700] [--max-pages N]
 //
-// --refresh    : 前回取得済みのブース詳細も取り直す（指定しなければ新規ブースだけ詳細を取りに行く）
+// --refresh    : 前回取得済みのブース詳細も全部取り直す
+// --stale-days : 前回の取得からこの日数以上たったブースの詳細を取り直す（既定 2）
+// --max-refetch: 1回で取り直す古いブースの上限（既定 700。古い順。新規ブースはこれと別に必ず取る）
 // --no-details : 一覧だけ取得する（ブース名・番号・出展日のみ。数分で終わる）
 //
 // 公式サイトへの負荷を避けるため、リクエストは 1 本ずつ、間隔(--delay ms)を空けて送ります。
@@ -84,13 +86,31 @@ if (booths.Count == 0)
 // ---- 2. ブース詳細（出品ゲーム・紹介文） ----
 if (!opt.NoDetails)
 {
+    // 取りに行くブースを決める。
+    //  必ず取る: 新規ブース／詳細が未取得／画像URLを取る前のデータしかない特設・エリア／--refresh
+    //  古いものは取り直す: 前回の取得から stale-days 以上たったもの（古い順に max-refetch 件まで）
+    //  → 毎日少しずつ取り直して、どのブースも数日以内の情報に保つ（公式サイトへの負担を一度に集中させない）
+    var now = DateTimeOffset.UtcNow;
+    var toFetch = new HashSet<int>();
+    var staleList = new List<(int Id, DateTimeOffset At)>();
+    foreach (var id in order)
+    {
+        if (opt.Refresh || !previous.TryGetValue(id, out var pv) || pv.DetailFetchedAt is not { } at
+            || (pv.Image is null && booths[id].Type is "特設" or "エリア"))
+            toFetch.Add(id);
+        else if (now - at >= TimeSpan.FromDays(opt.StaleDays))
+            staleList.Add((id, at));
+    }
+    int newCount = toFetch.Count;
+    foreach (var s in staleList.OrderBy(x => x.At).Take(opt.MaxRefetch)) toFetch.Add(s.Id);
+    Console.WriteLine($"詳細の取得予定: {toFetch.Count} 件（新規など {newCount} 件、{opt.StaleDays} 日以上前の取り直し {toFetch.Count - newCount} 件／対象 {staleList.Count} 件）");
+
     int i = 0, fetched = 0;
     foreach (var id in order)
     {
         i++;
         var b = booths[id];
-        if (!opt.Refresh && previous.TryGetValue(id, out var prev) && prev.DetailFetchedAt is not null
-            && !(prev.Image is null && b.Type is "特設" or "エリア")) // ブース画像を取る前のデータしかない特設・エリアは取り直す
+        if (!toFetch.Contains(id) && previous.TryGetValue(id, out var prev))
         {
             b.Games = prev.Games; b.Description = prev.Description; b.Links = prev.Links; b.Image = prev.Image; b.DetailFetchedAt = prev.DetailFetchedAt;
             continue;
@@ -163,12 +183,12 @@ void SaveDebug(string name, string html)
 
 // ===============================================================
 
-record Options(string Event, string Out, bool Refresh, bool NoDetails, int DelayMs, int MaxPages)
+record Options(string Event, string Out, bool Refresh, bool NoDetails, int DelayMs, int MaxPages, double StaleDays, int MaxRefetch)
 {
     public static Options Parse(string[] a)
     {
         string ev = "2026a", outPath = "docs/data/booths.json";
-        bool refresh = false, noDetails = false; int delay = 700, maxPages = 1000;
+        bool refresh = false, noDetails = false; int delay = 700, maxPages = 1000, maxRefetch = 700; double staleDays = 2;
         for (int i = 0; i < a.Length; i++)
         {
             switch (a[i])
@@ -179,11 +199,13 @@ record Options(string Event, string Out, bool Refresh, bool NoDetails, int Delay
                 case "--no-details": noDetails = true; break;
                 case "--delay": delay = int.Parse(a[++i]); break;
                 case "--max-pages": maxPages = int.Parse(a[++i]); break;
+                case "--stale-days": staleDays = double.Parse(a[++i], System.Globalization.CultureInfo.InvariantCulture); break;
+                case "--max-refetch": maxRefetch = int.Parse(a[++i]); break;
                 case "": break;
                 default: throw new ArgumentException($"不明なオプション: {a[i]}");
             }
         }
-        return new Options(ev, outPath, refresh, noDetails, Math.Max(delay, 300), maxPages);
+        return new Options(ev, outPath, refresh, noDetails, Math.Max(delay, 300), maxPages, staleDays, Math.Max(maxRefetch, 0));
     }
 }
 

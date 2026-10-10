@@ -74,8 +74,9 @@
         // 特設は specials.js、エリアは areas.js（番号 "エリア - 04" → "04"）
         const num = (b.number || "").replace(/\s+/g, "");
         const areaNo = (num.match(/^エリア-?(\d+)/) || [])[1];
-        const guide = (window.GM_SPECIAL || {})[num] || (areaNo && (window.GM_AREA || {})[areaNo.padStart(2, "0")]) || null;
         const description = cleanDesc(b.description);
+        const guide = (window.GM_SPECIAL || {})[num] || (areaNo && (window.GM_AREA || {})[areaNo.padStart(2, "0")])
+          || autoGuide(b, description);
         return {
           ...b,
           order: i,
@@ -133,6 +134,15 @@
     const j = t.search(/(\n|^)(その他\n)?開催位置\n/);
     if (j >= 0) t = t.slice(0, j);
     return t.trim() || null;
+  }
+
+  // 手書きの説明（specials.js / areas.js）がまだない特設・エリアブース用に、公式紹介文の冒頭を自動で出す
+  function autoGuide(b, description) {
+    if (b.type !== "特設" && b.type !== "エリア") return null;
+    const first = (description || "").replace(/\s+/g, " ").trim();
+    if (!first) return null;
+    const text = first.length > 80 ? first.slice(0, 80) + "…" : first;
+    return { kind: b.type, tags: ["公式紹介文より（自動）"], text };
   }
 
   // 種類の見出し。エリアの出展ジャンルは公式ホールマップと同じ色にする

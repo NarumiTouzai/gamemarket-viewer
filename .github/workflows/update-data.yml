@@ -8,7 +8,7 @@ on:
         type: boolean
         default: false
   schedule:
-    # 毎日 3:00 JST（UTC 18:00）。イベントが終わったら Actions 画面からこのワークフローを Disable してください
+    # 毎日 3:00 JST（UTC 18:00）。新規ブースの詳細に加え、2日以上前に取ったブースの詳細も古い順に最大700件取り直す。イベントが終わったら Actions 画面からこのワークフローを Disable してください
     - cron: "7 18 * * *"
 
 permissions:
@@ -36,6 +36,9 @@ jobs:
           ARGS="--event 2026a --out docs/data/booths.json"
           if [ "${{ inputs.refresh }}" = "true" ]; then ARGS="$ARGS --refresh"; fi
           dotnet run --project scraper -c Release -- $ARGS
+
+      - name: 手で入れるデータ（地図の位置・特設とエリアの説明）の不足を確認
+        run: node scripts/check-coverage.js docs
 
       - name: 解析用に取得した HTML を残す
         if: always()
