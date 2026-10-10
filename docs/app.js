@@ -167,10 +167,10 @@
     $("#list").classList.toggle("compact", state.view === "list");
     $("#jump").innerHTML = jump;
     $("#count").textContent = `${list.length} / ${booths.length} ブース　★${stars.size}　✓${done.size}`;
-    // 絞り込みで一覧が変わったら、見えている先頭のブースを地図に出し直す
-    current = null;
-    pinnedUntil = 0;
-    requestAnimationFrame(followScroll);
+    // 地図に出しているブースが絞り込みで消えたら、地図は全体表示に戻す
+    const curCard = current && document.querySelector(`.card[data-id="${current.id}"]`);
+    if (curCard) curCard.classList.add("cur");
+    else if (current) showMini(null, false);
   }
 
   function saveFilters() {
@@ -372,7 +372,6 @@
   const mini = MapView("mini");
   let miniHidden = store.get("miniHidden", false);
   let current = null;     // 赤枠を出しているブース
-  let pinnedUntil = 0;    // カードを押した直後はスクロール追従を少し止める
 
   function miniWidthFor(size) {
     const sc = $("#miniScroll");
@@ -387,7 +386,7 @@
     current = b;
     document.querySelectorAll(".card.cur").forEach((c) => c.classList.remove("cur"));
     if (b) document.querySelector(`.card[data-id="${b.id}"]`)?.classList.add("cur");
-    $("#miniTitle").textContent = b ? `${b.number}　${b.name}` : "会場マップ";
+    $("#miniTitle").textContent = b ? `${b.number}　${b.name}` : "会場マップ（一覧のブースを押すと場所が出ます）";
     if (miniHidden) return;
     const day = mapDayFor(b);
     const loc = b && M.locate(b, day);
@@ -399,30 +398,6 @@
     const width = miniWidthFor(size);
     mini.show(b, day, width, true, smooth && width === mini.width);
   }
-
-  // 一覧の見えている先頭のカードを探す
-  function followScroll() {
-    if (Date.now() < pinnedUntil || !booths.length) return;
-    const top = $("#mini").getBoundingClientRect();
-    const wide = matchMedia("(min-width: 1000px)").matches;
-    const y = (wide ? $(".bar").getBoundingClientRect().bottom : top.bottom) + 12;
-    const x = $("#list").getBoundingClientRect().left + 40;
-    let c = null;
-    for (const dy of [0, 30, 60, 100, 150]) {
-      c = document.elementFromPoint(x, y + dy)?.closest(".card");
-      if (c) break;
-    }
-    if (!c) return;
-    const b = booths.find((x) => x.id === Number(c.dataset.id));
-    if (b && b !== current) showMini(b, true);
-  }
-
-  let scrollTick = false;
-  window.addEventListener("scroll", () => {
-    if (scrollTick) return;
-    scrollTick = true;
-    requestAnimationFrame(() => { scrollTick = false; followScroll(); });
-  }, { passive: true });
 
   function setMiniHidden(h) {
     miniHidden = h;
@@ -436,7 +411,6 @@
 
   // カードを押したら、そのブースを地図に出す
   function selectBooth(b) {
-    pinnedUntil = Date.now() + 600;
     if (miniHidden) { openMap(b); return; }
     showMini(b, true);
   }
@@ -515,7 +489,6 @@
     const wide = matchMedia("(min-width: 1000px)").matches;
     const cover = $(".bar").offsetHeight + (wide ? 0 : $("#mini").offsetHeight);
     window.scrollTo({ top: c.getBoundingClientRect().top + window.scrollY - cover - 8 });
-    pinnedUntil = Date.now() + 800;
     showMini(b, true);
   }
 
