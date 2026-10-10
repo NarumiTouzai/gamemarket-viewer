@@ -70,14 +70,21 @@
       const res = await fetch(url, { cache: "no-cache" });
       if (!res.ok) throw new Error(res.status);
       const data = await res.json();
-      booths = data.booths.map((b, i) => ({
-        ...b,
-        order: i,
-        group: groupKey(b),
-        // 公式サイトのゲーム名は [ ] で囲まれているので外す
-        games: (b.games || []).map((g) => ({ ...g, title: (g.title || "").replace(/^\s*\[(.*)\]\s*$/, "$1") })),
-        hay: norm([b.name, b.number, b.type, ...(b.games || []).map((g) => g.title), b.description].join("\n")),
-      }));
+      booths = data.booths.map((b, i) => {
+        const guide = (window.GM_SPECIAL || {})[(b.number || "").replace(/\s+/g, "")] || null;
+        const description = cleanDesc(b.description);
+        return {
+          ...b,
+          order: i,
+          group: groupKey(b),
+          description,
+          guide, // 特設ブースの「どんな場所か」（specials.js）
+          // 公式サイトのゲーム名は [ ] で囲まれているので外す
+          games: (b.games || []).map((g) => ({ ...g, title: (g.title || "").replace(/^\s*\[(.*)\]\s*$/, "$1") })),
+          hay: norm([b.name, b.number, b.type, ...(b.games || []).map((g) => g.title), description,
+            guide && [guide.kind, ...guide.tags, guide.text].join(" ")].join("\n")),
+        };
+      });
       typeOrder = [...new Set(booths.map((b) => b.type).filter(Boolean))];
       const gen = new Date(data.generatedAt);
       $("#meta").textContent =
@@ -115,6 +122,16 @@
     return { list, terms };
   }
 
+  // 公式ページの本文から取った紹介文の、前後の定型部分（ページ上部の案内・入場チケットの告知）を外す
+  function cleanDesc(t) {
+    if (!t) return t;
+    const i = t.indexOf("ブース概要");
+    if (i >= 0) t = t.slice(i + "ブース概要".length);
+    const j = t.search(/(\n|^)(その他\n)?開催位置\n/);
+    if (j >= 0) t = t.slice(0, j);
+    return t.trim() || null;
+  }
+
   // リンクの表示用の文字（https:// を外し、%E3… を日本語に戻す）
   function linkLabel(u) {
     const s = u.replace(/^https?:\/\/(www\.)?/, "");
@@ -140,8 +157,14 @@
       ? `<a class="thumb" href="${esc(b.url)}" target="_blank" rel="noopener"><img loading="lazy" alt="" src="${esc(b.image.replace(/\/([^/]+)$/, "/thumb_$1"))}" onerror="this.parentElement.remove()"></a>`
       : "";
     // リスト表示で1行に収める、ゲーム名の要約
+    // 特設ブースは「どんな場所か」（specials.js）を出す
+    const g = b.guide;
+    const guide = g
+      ? `<div class="guide"><span class="kind">${esc(g.kind)}</span>${g.tags.map((t) => `<span class="gtag">${esc(t)}</span>`).join("")}<p>${highlight(g.text, terms)}</p></div>`
+      : "";
     const sum = `<div class="sum">${b.day !== "both" ? `<span class="tag ${b.day}">${dayLabel[b.day]}</span>` : ""}${
-      b.games.length
+      g ? `<span class="kind">${esc(g.kind)}</span>${esc(g.text)}`
+      : b.games.length
         ? `${b.games.slice(0, 3).map((g) => highlight(g.title || "", terms)).join(" / ")}${b.games.length > 3 ? ` ほか${b.games.length - 3}件` : ""}`
         : `<span class="none">ゲーム登録なし</span>`}</div>`;
     return `<article class="card${s ? " star" : ""}${d ? " done" : ""}${opened.has(b.id) ? " open" : ""}" data-id="${b.id}">
@@ -157,7 +180,7 @@
         ${b.type ? `<span class="tag type">${esc(b.type)}</span>` : ""}
         ${b.games.length ? `<span class="tag type">ゲーム ${b.games.length}</span>` : ""}
       </div>
-      <div class="body">${thumb}${games}${desc}${links}</div>
+      <div class="body">${guide}${thumb}${games}${desc}${links}</div>
     </article>`;
   }
 

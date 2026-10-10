@@ -277,3 +277,16 @@ dialog textarea { width: 100%; font: 13px/1.5 ui-monospace, monospace; backgroun
   .card { break-inside: avoid; }
   body { background: #fff; }
 }
+
+/* ---- 特設ブースの「どんな場所か」 ---- */
+.guide { margin-top: 6px; font-size: 13px; }
+.guide p { margin: 4px 0 0; color: var(--ink); }
+.kind {
+  display: inline-block; font-size: 11px; font-weight: 700; padding: 0 6px; margin-right: 4px;
+  border-radius: 4px; background: var(--accent); color: var(--accent-ink);
+}
+.gtag {
+  display: inline-block; font-size: 11px; padding: 0 5px; margin-right: 4px;
+  border: 1px solid var(--line); border-radius: 4px; color: var(--sub);
+}
+.compact .sum .kind { font-size: 10px; }
