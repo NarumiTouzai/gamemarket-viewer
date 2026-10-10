@@ -166,6 +166,7 @@ dialog.map-dlg[open] { display: flex; }
   flex: 1; overflow: auto; background: #fff; -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain; /* 地図の端まで動かしても、一覧のほうはスクロールさせない */
   cursor: grab; user-select: none;
+  touch-action: pan-x pan-y; /* 2本指の拡大はページではなく地図に効かせる（app.js の pinchZoom） */
 }
 .map-scroll.grabbing { cursor: grabbing; }
 .map-scroll img { -webkit-user-drag: none; }

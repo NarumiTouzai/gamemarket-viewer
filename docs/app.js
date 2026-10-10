@@ -309,7 +309,44 @@
       const sc = el("Scroll");
       return [(sc.scrollLeft + sc.clientWidth / 2) / v.width, (sc.scrollTop + sc.clientHeight / 2) / (v.width * (M.H / M.W))];
     };
+    // 画面上の (cx, cy) の位置を動かさずに、地図の幅を w にする（ピンチ・ホイール拡大用）
+    v.zoomAt = (w, cx, cy) => {
+      if (!v.width) return;
+      const sc = el("Scroll"), r = sc.getBoundingClientRect();
+      const px = cx - r.left, py = cy - r.top;
+      const fx = (sc.scrollLeft + px) / v.width, fy = (sc.scrollTop + py) / v.width;
+      v.width = Math.round(Math.min(Math.max(w, sc.clientWidth), Math.max(sc.clientWidth * 8, 6000)));
+      el("Stage").style.width = `${v.width}px`;
+      sc.scrollLeft = fx * v.width - px;
+      sc.scrollTop = fy * v.width - py;
+    };
+
+    pinchZoom(el("Scroll"), v);
     return v;
+  }
+
+  // 地図の中での 2本指ピンチ と Ctrl+ホイール（PCのトラックパッドのピンチも含む）で、地図だけを拡大縮小する
+  function pinchZoom(sc, v) {
+    let p = null;
+    const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    const mid = (t) => [(t[0].clientX + t[1].clientX) / 2, (t[0].clientY + t[1].clientY) / 2];
+    sc.addEventListener("touchstart", (e) => {
+      if (e.touches.length === 2) p = { d: dist(e.touches), w: v.width };
+    }, { passive: true });
+    sc.addEventListener("touchmove", (e) => {
+      if (!p || e.touches.length !== 2) return;
+      e.preventDefault(); // ページ全体の拡大を止める
+      const [cx, cy] = mid(e.touches);
+      v.zoomAt(p.w * (dist(e.touches) / p.d), cx, cy);
+    }, { passive: false });
+    sc.addEventListener("touchend", (e) => { if (e.touches.length < 2) p = null; });
+    // iOS Safari はページ拡大を gesture イベントで行うので、地図の上では止める
+    sc.addEventListener("gesturestart", (e) => e.preventDefault());
+    sc.addEventListener("wheel", (e) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      v.zoomAt(v.width * Math.exp(-e.deltaY * 0.004), e.clientX, e.clientY);
+    }, { passive: false });
   }
 
   // ---- 一覧の横に出しておく地図 ----
@@ -438,12 +475,14 @@
   }
 
   function zoomBy(dir) {
-    const i = ZOOMS.indexOf(bigZoom) + dir;
-    if (i < 0 || i >= ZOOMS.length) return;
-    const [fx, fy] = big.center();
-    bigZoom = ZOOMS[i];
-    drawBig(big.booth, big.day, false);
-    big.centerOn(fx, fy);
+    // ピンチで中途半端な倍率になっていることがあるので、今の倍率から次の段階を探す
+    const sc = $("#mapScroll");
+    const cur = big.width / sc.clientWidth;
+    const next = dir > 0 ? ZOOMS.find((z) => z > cur * 1.05) : [...ZOOMS].reverse().find((z) => z < cur * 0.95);
+    if (!next) return;
+    const r = sc.getBoundingClientRect();
+    bigZoom = next;
+    big.zoomAt(sc.clientWidth * next, r.left + sc.clientWidth / 2, r.top + sc.clientHeight / 2);
   }
 
   $("#openMap").addEventListener("click", () => openMap(current));
