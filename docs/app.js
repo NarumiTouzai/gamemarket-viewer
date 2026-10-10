@@ -466,12 +466,59 @@
       sc.scrollLeft = drag.l - (e.clientX - drag.x);
       sc.scrollTop = drag.t - (e.clientY - drag.y);
     });
-    const end = () => { drag = null; sc.classList.remove("grabbing"); };
+    const end = (e) => {
+      // 少しでも動かしたら「押した」ではなく「動かした」扱いにする（地図タップでの移動と区別）
+      if (drag) sc.dataset.moved = String(Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 5);
+      drag = null; sc.classList.remove("grabbing");
+    };
     sc.addEventListener("pointerup", end);
     sc.addEventListener("pointercancel", end);
   }
   dragToPan($("#miniScroll"));
   dragToPan($("#mapScroll"));
+
+  // 地図を押したら、その場所のブースへ一覧を移動する。
+  // エリア・特設はそのブース、一般ブースの島は島の先頭のブースへ
+  function tapToJump(sc, v, afterJump) {
+    sc.addEventListener("click", (e) => {
+      if (sc.dataset.moved === "true") { sc.dataset.moved = "false"; return; }
+      const r = sc.querySelector(".map-stage").getBoundingClientRect();
+      const x = ((e.clientX - r.left) / r.width) * M.W, y = ((e.clientY - r.top) / r.height) * M.H;
+      const b = boothAt(x, y, v.day);
+      if (!b) return;
+      afterJump && afterJump();
+      jumpTo(b);
+    });
+  }
+
+  function boothAt(x, y, day) {
+    const shown = new Set([...document.querySelectorAll("#list .card")].map((c) => Number(c.dataset.id)));
+    let best = null, bestArea = Infinity, island = null;
+    for (const b of booths) {
+      if (!shown.has(b.id)) continue;
+      const loc = M.locate(b, day);
+      if (!loc) continue;
+      const [x1, y1, x2, y2] = loc.pt ? [loc.pt[0] - 22, loc.pt[1] - 22, loc.pt[0] + 22, loc.pt[1] + 22] : loc.box;
+      if (x < x1 - 4 || x > x2 + 4 || y < y1 - 4 || y > y2 + 4) continue;
+      if (loc.island) { island = island || b; continue; } // 一覧の順で最初のもの＝島の先頭
+      const area = (x2 - x1) * (y2 - y1);                  // 重なっていたら小さい区画を優先
+      if (area < bestArea) { best = b; bestArea = area; }
+    }
+    return best || island;
+  }
+
+  // 一覧をそのブースまでスクロールして、地図にも出す
+  function jumpTo(b) {
+    const c = document.querySelector(`#list .card[data-id="${b.id}"]`);
+    if (!c) return;
+    if (state.view === "list") { opened.add(b.id); c.classList.add("open"); }
+    const wide = matchMedia("(min-width: 1000px)").matches;
+    const cover = $(".bar").offsetHeight + (wide ? 0 : $("#mini").offsetHeight);
+    window.scrollTo({ top: c.getBoundingClientRect().top + window.scrollY - cover - 8 });
+    pinnedUntil = Date.now() + 800;
+    showMini(b, true);
+  }
+
 
   $("#miniHide").addEventListener("click", () => setMiniHidden(!miniHidden));
   $("#miniBig").addEventListener("click", () => openMap(current));
@@ -512,6 +559,9 @@
     const btn = e.target.closest("[data-mday]");
     if (btn) drawBig(big.booth, +btn.dataset.mday, true);
   });
+
+  tapToJump($("#miniScroll"), mini);
+  tapToJump($("#mapScroll"), big, () => $("#mapDlg").close());
 
   setMiniHidden(miniHidden);
   load();
