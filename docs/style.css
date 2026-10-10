@@ -95,7 +95,7 @@ h1 span { font-weight: 500; color: var(--sub); font-size: 14px; }
 main { padding: 0 16px 24px; max-width: 980px; margin: 0 auto; }
 .group h2 {
   font-size: 13px; color: var(--sub); margin: 18px 0 6px; font-weight: 600;
-  scroll-margin-top: 150px;
+  scroll-margin-top: calc(var(--bar-h, 150px) + var(--mini-h, 0px) + 8px);
 }
 .group h2 b { color: var(--ink); font-size: 15px; margin-right: 6px; }
 .cards { display: grid; gap: 8px; }
@@ -116,6 +116,37 @@ main { padding: 0 16px 24px; max-width: 980px; margin: 0 auto; }
 .num i { font-style: normal; font-size: 11px; margin-left: 3px; }
 .num:hover { border-color: var(--accent); }
 button.map-link { border: 1px solid var(--accent); background: transparent; color: var(--accent); border-radius: 999px; padding: 2px 10px; }
+
+.card { cursor: pointer; }
+.card.cur { outline: 3px solid #e3001b; outline-offset: -1px; }
+
+/* ---- 一覧と並べる地図 ---- */
+/* スマホ: ヘッダーの下に地図を固定し、その下を一覧がスクロールする */
+.mini {
+  position: sticky; top: var(--bar-h, 0px); z-index: 9;
+  background: var(--bg); border-bottom: 1px solid var(--line);
+}
+.mini-cap { display: flex; align-items: center; gap: 6px; padding: 4px 16px; font-size: 13px; }
+.mini-title { flex: 1; min-width: 0; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini-cap .ghost { flex: none; font-size: 12px; padding: 2px 8px; }
+.mini-note { padding: 2px 16px 4px; font-size: 12px; color: var(--sub); }
+.mini-scroll { height: clamp(150px, 30vh, 360px); flex: none; }
+/* 広い画面: 左に一覧、右に地図（画面の高さいっぱいで固定） */
+@media (min-width: 1000px) {
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(420px, 48%); align-items: start; }
+  .listcol { grid-column: 1; grid-row: 1; }
+  .listcol main { max-width: none; }
+  .listcol .cards { grid-template-columns: 1fr; }
+  .mini {
+    grid-column: 2; grid-row: 1; height: calc(100dvh - var(--bar-h, 0px));
+    display: flex; flex-direction: column; border-bottom: 0; border-left: 1px solid var(--line);
+  }
+  .mini.closed { height: auto; }
+  #miniBody { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  #miniBody[hidden] { display: none; }
+  .mini-scroll { flex: 1; height: auto; }
+}
+@media (min-width: 1400px) { .listcol .cards { grid-template-columns: 1fr 1fr; } }
 
 /* ---- 会場マップ ---- */
 dialog.map-dlg {

@@ -37,9 +37,29 @@
     </div>
   </header>
 
-  <nav id="jump" class="jump" aria-label="ブロックへ移動"></nav>
+  <div class="layout">
+    <aside id="mini" class="mini">
+      <div class="mini-cap">
+        <div id="miniTitle" class="mini-title"></div>
+        <button id="miniBig" class="ghost" type="button">⤢ 拡大</button>
+        <button id="miniHide" class="ghost" type="button">地図を隠す</button>
+      </div>
+      <div id="miniBody">
+        <div id="miniNote" class="mini-note" hidden></div>
+        <div id="miniScroll" class="map-scroll mini-scroll">
+          <div id="miniStage" class="map-stage">
+            <img id="miniImg" alt="会場マップ">
+            <div id="miniMark" class="map-mark" hidden></div>
+          </div>
+        </div>
+      </div>
+    </aside>
 
-  <main id="list" aria-live="polite"></main>
+    <div class="listcol">
+      <nav id="jump" class="jump" aria-label="ブロックへ移動"></nav>
+      <main id="list" aria-live="polite"></main>
+    </div>
+  </div>
 
   <footer class="foot">
     <p id="meta"></p>
@@ -76,7 +96,7 @@
     <div id="mapNote" class="map-note"></div>
     <div id="mapScroll" class="map-scroll">
       <div id="mapStage" class="map-stage">
-        <img id="mapImg" alt="会場マップ">
+        <img id="mapImg" alt="会場マップ（拡大）">
         <div id="mapMark" class="map-mark" hidden></div>
       </div>
     </div>

@@ -158,6 +158,10 @@
     $("#list").innerHTML = html || `<p class="empty">条件に合うブースがありません。</p>`;
     $("#jump").innerHTML = jump;
     $("#count").textContent = `${list.length} / ${booths.length} ブース　★${stars.size}　✓${done.size}`;
+    // 絞り込みで一覧が変わったら、見えている先頭のブースを地図に出し直す
+    current = null;
+    pinnedUntil = 0;
+    requestAnimationFrame(followScroll);
   }
 
   function saveFilters() {
@@ -202,9 +206,14 @@
 
   $("#list").addEventListener("click", (e) => {
     const btn = e.target.closest("[data-act]");
-    if (!btn) return;
-    const id = Number(btn.closest(".card").dataset.id);
-    if (btn.dataset.act === "map") { openMap(booths.find((x) => x.id === id)); return; }
+    const cardEl = e.target.closest(".card");
+    if (!btn) {
+      // リンクや紹介文の開閉以外のところを押したら、そのブースを地図に出す
+      if (cardEl && !e.target.closest("a, summary, details p")) selectBooth(booths.find((x) => x.id === Number(cardEl.dataset.id)));
+      return;
+    }
+    const id = Number(cardEl.dataset.id);
+    if (btn.dataset.act === "map") { selectBooth(booths.find((x) => x.id === id)); return; }
     const set = btn.dataset.act === "star" ? stars : done;
     set.has(id) ? set.delete(id) : set.add(id);
     store.set("stars", [...stars]);
@@ -214,6 +223,7 @@
     const { terms } = filtered();
     const tmp = document.createElement("div");
     tmp.innerHTML = card(b, terms);
+    if (current === b) tmp.firstElementChild.classList.add("cur");
     btn.closest(".card").replaceWith(tmp.firstElementChild);
     $("#count").textContent = $("#count").textContent.replace(/★\d+　✓\d+/, `★${stars.size}　✓${done.size}`);
   });
@@ -242,80 +252,187 @@
 
   // ---------- 会場マップ ----------
   const M = window.GM_MAP;
-  const map = { booth: null, day: 1, zoom: 3 };
+
+  // 土曜のみ→土の地図、日曜のみ→日の地図、両日→いま選んでいる参加日
+  const mapDayFor = (b) => (b && b.day === "sun" ? 2 : b && b.day === "sat" ? 1 : state.day === "sun" ? 2 : 1);
+  const boothNo = (b) => b.number.replace(/^.*?([0-9]+)$/, "$1").replace(/^0+/, "");
+
+  // 地図1枚分の表示（一覧の横の地図と、全画面の地図で共用）
+  function MapView(p) {
+    const el = (s) => document.getElementById(p + s);
+    const v = { booth: null, day: 1, width: 0 };
+
+    v.show = (b, day, width, recenter, smooth) => {
+      v.booth = b; v.day = day; v.width = width;
+      const img = el("Img");
+      if (img.getAttribute("src") !== M.images[day]) img.src = M.images[day];
+      el("Stage").style.width = `${width}px`;
+
+      const loc = b && M.locate(b, day);
+      const mark = el("Mark");
+      mark.hidden = !loc;
+      let note = "";
+      if (b && !loc) {
+        note = M.locate(b, 3 - day)
+          ? `この日の地図にはありません（${day === 1 ? "日曜" : "土曜"}の地図にあります）`
+          : "地図上の位置が分かりませんでした。公式の地図で確認してください。";
+      } else if (loc && loc.island) {
+        note = `${loc.island} の島（赤枠）の中の番号 ${boothNo(b)}`;
+      }
+      el("Note").textContent = note;
+      el("Note").hidden = !note;
+      if (!loc) return null;
+
+      const pad = 6;
+      const [x1, y1, x2, y2] = loc.pt ? [loc.pt[0] - 20, loc.pt[1] - 20, loc.pt[0] + 20, loc.pt[1] + 20] : loc.box;
+      Object.assign(mark.style, {
+        left: `${((x1 - pad) / M.W) * 100}%`, top: `${((y1 - pad) / M.H) * 100}%`,
+        width: `${((x2 - x1 + pad * 2) / M.W) * 100}%`, height: `${((y2 - y1 + pad * 2) / M.H) * 100}%`,
+      });
+      mark.classList.toggle("round", !!loc.pt);
+      if (recenter) v.centerOn((x1 + x2) / 2 / M.W, (y1 + y2) / 2 / M.H, smooth);
+      return [x2 - x1 + pad * 2, y2 - y1 + pad * 2];
+    };
+
+    // 地図上の割合 (fx, fy) が枠の真ん中に来るようにスクロール
+    v.centerOn = (fx, fy, smooth) => {
+      const sc = el("Scroll");
+      requestAnimationFrame(() => sc.scrollTo({
+        left: fx * v.width - sc.clientWidth / 2,
+        top: fy * v.width * (M.H / M.W) - sc.clientHeight / 2,
+        behavior: smooth ? "smooth" : "auto",
+      }));
+    };
+
+    // 枠の真ん中が地図のどこか（拡大・縮小で中心を保つため）
+    v.center = () => {
+      const sc = el("Scroll");
+      return [(sc.scrollLeft + sc.clientWidth / 2) / v.width, (sc.scrollTop + sc.clientHeight / 2) / (v.width * (M.H / M.W))];
+    };
+    return v;
+  }
+
+  // ---- 一覧の横に出しておく地図 ----
+  const mini = MapView("mini");
+  let miniHidden = store.get("miniHidden", false);
+  let current = null;     // 赤枠を出しているブース
+  let pinnedUntil = 0;    // カードを押した直後はスクロール追従を少し止める
+
+  function miniWidthFor(size) {
+    const sc = $("#miniScroll");
+    const w = sc.clientWidth, h = sc.clientHeight;
+    if (!size) return w;
+    // 赤枠が枠に収まる範囲で大きく。エリアの小さな区画でも拡大しすぎない
+    const fit = Math.min((0.8 * w * M.W) / size[0], (0.8 * h * M.W) / size[1]);
+    return Math.round(Math.max(w, Math.min(fit, 1700, w * 5)));
+  }
+
+  function showMini(b, smooth) {
+    current = b;
+    document.querySelectorAll(".card.cur").forEach((c) => c.classList.remove("cur"));
+    if (b) document.querySelector(`.card[data-id="${b.id}"]`)?.classList.add("cur");
+    $("#miniTitle").textContent = b ? `${b.number}　${b.name}` : "会場マップ";
+    if (miniHidden) return;
+    const day = mapDayFor(b);
+    const loc = b && M.locate(b, day);
+    let size = null;
+    if (loc) {
+      const [x1, y1, x2, y2] = loc.pt ? [loc.pt[0] - 20, loc.pt[1] - 20, loc.pt[0] + 20, loc.pt[1] + 20] : loc.box;
+      size = [x2 - x1 + 12, y2 - y1 + 12];
+    }
+    const width = miniWidthFor(size);
+    mini.show(b, day, width, true, smooth && width === mini.width);
+  }
+
+  // 一覧の見えている先頭のカードを探す
+  function followScroll() {
+    if (Date.now() < pinnedUntil || !booths.length) return;
+    const top = $("#mini").getBoundingClientRect();
+    const wide = matchMedia("(min-width: 1000px)").matches;
+    const y = (wide ? $(".bar").getBoundingClientRect().bottom : top.bottom) + 12;
+    const x = $("#list").getBoundingClientRect().left + 40;
+    let c = null;
+    for (const dy of [0, 30, 60, 100, 150]) {
+      c = document.elementFromPoint(x, y + dy)?.closest(".card");
+      if (c) break;
+    }
+    if (!c) return;
+    const b = booths.find((x) => x.id === Number(c.dataset.id));
+    if (b && b !== current) showMini(b, true);
+  }
+
+  let scrollTick = false;
+  window.addEventListener("scroll", () => {
+    if (scrollTick) return;
+    scrollTick = true;
+    requestAnimationFrame(() => { scrollTick = false; followScroll(); });
+  }, { passive: true });
+
+  function setMiniHidden(h) {
+    miniHidden = h;
+    store.set("miniHidden", h);
+    $("#miniBody").hidden = h;
+    $("#mini").classList.toggle("closed", h);
+    $("#miniHide").textContent = h ? "地図を出す" : "地図を隠す";
+    updateBarHeight();
+    if (!h) showMini(current, false);
+  }
+
+  // カードを押したら、そのブースを地図に出す
+  function selectBooth(b) {
+    pinnedUntil = Date.now() + 600;
+    if (miniHidden) { openMap(b); return; }
+    showMini(b, true);
+  }
+
+  // 固定ヘッダーの高さを CSS に渡す（見出しへのジャンプ位置と、地図の固定位置に使う）
+  function updateBarHeight() {
+    const h = $(".bar").offsetHeight;
+    document.documentElement.style.setProperty("--bar-h", `${h}px`);
+    const mh = matchMedia("(min-width: 1000px)").matches ? 0 : $("#mini").offsetHeight;
+    document.documentElement.style.setProperty("--mini-h", `${mh}px`);
+  }
+  new ResizeObserver(() => { updateBarHeight(); if (current) showMini(current, false); }).observe($(".bar"));
+  window.addEventListener("resize", updateBarHeight);
+
+  $("#miniHide").addEventListener("click", () => setMiniHidden(!miniHidden));
+  $("#miniBig").addEventListener("click", () => openMap(current));
+
+  // ---- 全画面の地図 ----
+  const big = MapView("map");
   const ZOOMS = [1, 1.5, 2, 3, 4, 6];
+  let bigZoom = 3;
 
   function openMap(b) {
-    map.booth = b || null;
-    // 土曜のみ→土の地図、日曜のみ→日の地図、両日→いま選んでいる参加日
-    map.day = b && b.day === "sun" ? 2 : b && b.day === "sat" ? 1 : state.day === "sun" ? 2 : 1;
-    map.zoom = b ? 3 : 1;
+    bigZoom = b ? 3 : 1;
     $("#mapTitle").textContent = b ? `${b.number}　${b.name}` : "会場マップ";
     $("#mapDlg").showModal();
-    drawMap(true);
+    drawBig(b, mapDayFor(b), true);
   }
 
-  function drawMap(recenter) {
-    const b = map.booth;
-    document.querySelectorAll("#mapDays button").forEach((x) => x.setAttribute("aria-pressed", String(+x.dataset.mday === map.day)));
-    const img = $("#mapImg");
-    if (img.getAttribute("src") !== M.images[map.day]) img.src = M.images[map.day];
-    $("#mapStage").style.width = `${map.zoom * 100}%`;
-
-    const loc = b && M.locate(b, map.day);
-    const mark = $("#mapMark");
-    mark.hidden = !loc;
-    let note = "";
-    if (b && !loc) {
-      const other = M.locate(b, 3 - map.day);
-      note = other ? `この日の地図にはありません（${map.day === 1 ? "日曜" : "土曜"}の地図に切り替えてください）` : "地図上の位置が分かりませんでした。公式の地図で確認してください。";
-    } else if (loc && loc.island) {
-      note = `${loc.island} の島（赤枠）の中で、地図に小さく書かれた番号 ${b.number.replace(/^.*?([0-9]+)$/, "$1").replace(/^0+/, "")} を探してください。`;
-    }
-    $("#mapNote").textContent = note;
-    $("#mapNote").hidden = !note;
-    if (!loc) return;
-
-    const pad = 6;
-    const [x1, y1, x2, y2] = loc.pt ? [loc.pt[0] - 20, loc.pt[1] - 20, loc.pt[0] + 20, loc.pt[1] + 20] : loc.box;
-    Object.assign(mark.style, {
-      left: `${((x1 - pad) / M.W) * 100}%`, top: `${((y1 - pad) / M.H) * 100}%`,
-      width: `${((x2 - x1 + pad * 2) / M.W) * 100}%`, height: `${((y2 - y1 + pad * 2) / M.H) * 100}%`,
-    });
-    mark.classList.toggle("round", !!loc.pt);
-    if (recenter) centerOn((x1 + x2) / 2 / M.W, (y1 + y2) / 2 / M.H);
-  }
-
-  // 地図上の割合 (fx, fy) が画面の真ん中に来るようにスクロール
-  function centerOn(fx, fy) {
-    const sc = $("#mapScroll"), st = $("#mapStage");
-    requestAnimationFrame(() => {
-      sc.scrollLeft = fx * st.offsetWidth - sc.clientWidth / 2;
-      sc.scrollTop = fy * st.offsetWidth * (M.H / M.W) - sc.clientHeight / 2;
-    });
+  function drawBig(b, day, recenter) {
+    document.querySelectorAll("#mapDays button").forEach((x) => x.setAttribute("aria-pressed", String(+x.dataset.mday === day)));
+    big.show(b, day, $("#mapScroll").clientWidth * bigZoom, recenter, false);
   }
 
   function zoomBy(dir) {
-    const sc = $("#mapScroll"), st = $("#mapStage");
-    const fx = (sc.scrollLeft + sc.clientWidth / 2) / st.offsetWidth;
-    const fy = (sc.scrollTop + sc.clientHeight / 2) / (st.offsetWidth * (M.H / M.W));
-    const i = ZOOMS.indexOf(map.zoom) + dir;
+    const i = ZOOMS.indexOf(bigZoom) + dir;
     if (i < 0 || i >= ZOOMS.length) return;
-    map.zoom = ZOOMS[i];
-    drawMap(false);
-    centerOn(fx, fy);
+    const [fx, fy] = big.center();
+    bigZoom = ZOOMS[i];
+    drawBig(big.booth, big.day, false);
+    big.centerOn(fx, fy);
   }
 
-  $("#openMap").addEventListener("click", () => openMap(null));
+  $("#openMap").addEventListener("click", () => openMap(current));
   $("#mapClose").addEventListener("click", () => $("#mapDlg").close());
   $("#zoomIn").addEventListener("click", () => zoomBy(1));
   $("#zoomOut").addEventListener("click", () => zoomBy(-1));
   $("#mapDays").addEventListener("click", (e) => {
     const btn = e.target.closest("[data-mday]");
-    if (!btn) return;
-    map.day = +btn.dataset.mday;
-    drawMap(true);
+    if (btn) drawBig(big.booth, +btn.dataset.mday, true);
   });
 
+  setMiniHidden(miniHidden);
   load();
 })();
