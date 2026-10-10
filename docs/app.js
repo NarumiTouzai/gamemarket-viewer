@@ -334,7 +334,8 @@
       const sc = el("Scroll"), r = sc.getBoundingClientRect();
       const px = cx - r.left, py = cy - r.top;
       const fx = (sc.scrollLeft + px) / v.width, fy = (sc.scrollTop + py) / v.width;
-      v.width = Math.round(Math.min(Math.max(w, sc.clientWidth), Math.max(sc.clientWidth * 8, 6000)));
+      const fitAll = Math.min(sc.clientWidth, (sc.clientHeight * M.W) / M.H); // 地図全体が収まる大きさ
+      v.width = Math.round(Math.min(Math.max(w, fitAll), Math.max(sc.clientWidth * 8, 6000)));
       el("Stage").style.width = `${v.width}px`;
       sc.scrollLeft = fx * v.width - px;
       sc.scrollTop = fy * v.width - py;
@@ -376,7 +377,8 @@
   function miniWidthFor(size) {
     const sc = $("#miniScroll");
     const w = sc.clientWidth, h = sc.clientHeight;
-    if (!size) return w;
+    // 何も選んでいないときは地図全体を枠の中に収める（はみ出すとスワイプで地図が動いてしまう）
+    if (!size) return Math.floor(Math.min(w, (h * M.W) / M.H));
     // 赤枠が枠に収まる範囲で大きく。エリアの小さな区画でも拡大しすぎない
     const fit = Math.min((0.8 * w * M.W) / size[0], (0.8 * h * M.W) / size[1]);
     return Math.round(Math.max(w, Math.min(fit, 1700, w * 5)));

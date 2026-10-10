@@ -200,7 +200,7 @@ dialog.map-dlg[open] { display: flex; }
 }
 .map-scroll.grabbing { cursor: grabbing; }
 .map-scroll img { -webkit-user-drag: none; }
-.map-stage { position: relative; aspect-ratio: 2000 / 1310; }
+.map-stage { position: relative; aspect-ratio: 2000 / 1310; margin: 0 auto; }
 .map-stage img { display: block; width: 100%; height: 100%; max-width: none; }
 .map-mark {
   position: absolute; border: 3px solid #e3001b; border-radius: 4px;
