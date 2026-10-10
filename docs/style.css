@@ -117,6 +117,36 @@ main { padding: 0 16px 24px; max-width: 980px; margin: 0 auto; }
 .num:hover { border-color: var(--accent); }
 button.map-link { border: 1px solid var(--accent); background: transparent; color: var(--accent); border-radius: 999px; padding: 2px 10px; }
 
+.seg.small button { padding: 2px 10px; font-size: 12px; }
+.sum { display: none; }
+
+/* ---- リスト表示: 1ブース1行。押すと詳細が開く ---- */
+.compact .cards { grid-template-columns: 1fr !important; gap: 0; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.compact .card {
+  border: 0; border-radius: 0; border-bottom: 1px solid var(--line);
+  padding: 6px 10px; gap: 0 8px; align-items: center;
+}
+.compact .card:last-child { border-bottom: 0; }
+.compact .card.star { box-shadow: inset 4px 0 0 var(--star); }
+.compact .card.cur { outline: 0; box-shadow: inset 0 0 0 2px #e3001b; }
+.compact .num { grid-column: 1; grid-row: 1 / span 2; align-self: center; min-width: 6.5em; font-size: 12px; }
+.compact .name { grid-column: 2; grid-row: 1; font-size: 14px; line-height: 1.35; }
+.compact .sum {
+  display: block; grid-column: 2; grid-row: 2; font-size: 12px; color: var(--sub);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.compact .sum .tag { font-size: 10px; margin-right: 4px; }
+.compact .sum .none { opacity: .7; }
+.compact .sum::before { content: "▸ "; }
+.compact .card.open .sum::before { content: "▾ "; }
+.compact .card.open .sum { white-space: normal; }
+.compact .acts { grid-column: 3; grid-row: 1 / span 2; align-self: center; }
+.compact .card.open .body { grid-column: 1 / -1; grid-row: 3; }
+.compact .acts button { width: 30px; height: 30px; font-size: 14px; }
+.compact .tags { display: none; }
+.compact .body { display: none; }
+.compact .card.open .body { display: block; padding: 2px 0 4px; }
+
 .card { cursor: pointer; }
 .card.cur { outline: 3px solid #e3001b; outline-offset: -1px; }
 

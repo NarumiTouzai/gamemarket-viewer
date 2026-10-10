@@ -17,12 +17,13 @@
   const stars = new Set(store.get("stars", []));
   const done = new Set(store.get("done", []));
   const state = Object.assign(
-    { day: "sat", q: "", types: [], onlyStar: false, hideDone: false, onlyGames: false },
+    { day: "sat", q: "", types: [], onlyStar: false, hideDone: false, onlyGames: false, view: "detail" },
     store.get("filters", {}),
     { q: "" }
   );
 
   let booths = [];
+  const opened = new Set(); // リスト表示で詳細を開いているブース
   let typeOrder = [];
 
   // ---------- 検索用の正規化（全角半角・ひらがなカタカナ・大小文字を同一視） ----------
@@ -73,7 +74,8 @@
         ...b,
         order: i,
         group: groupKey(b),
-        games: b.games || [],
+        // 公式サイトのゲーム名は [ ] で囲まれているので外す
+        games: (b.games || []).map((g) => ({ ...g, title: (g.title || "").replace(/^\s*\[(.*)\]\s*$/, "$1") })),
         hay: norm([b.name, b.number, b.type, ...(b.games || []).map((g) => g.title), b.description].join("\n")),
       }));
       typeOrder = [...new Set(booths.map((b) => b.type).filter(Boolean))];
@@ -126,9 +128,15 @@
     const links = (b.links || []).length
       ? `<div class="links">${b.links.map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\/(www\.)?/, ""))}</a>`).join("")}</div>`
       : "";
-    return `<article class="card${s ? " star" : ""}${d ? " done" : ""}" data-id="${b.id}">
+    // リスト表示で1行に収める、ゲーム名の要約
+    const sum = `<div class="sum">${b.day !== "both" ? `<span class="tag ${b.day}">${dayLabel[b.day]}</span>` : ""}${
+      b.games.length
+        ? `${b.games.slice(0, 3).map((g) => highlight(g.title || "", terms)).join(" / ")}${b.games.length > 3 ? ` ほか${b.games.length - 3}件` : ""}`
+        : `<span class="none">ゲーム登録なし</span>`}</div>`;
+    return `<article class="card${s ? " star" : ""}${d ? " done" : ""}${opened.has(b.id) ? " open" : ""}" data-id="${b.id}">
       <button class="num" data-act="map" type="button" title="会場マップで場所を見る">${esc(b.number || "—")}<i>📍</i></button>
       <div class="name"><a href="${esc(b.url)}" target="_blank" rel="noopener">${highlight(b.name, terms)}</a></div>
+      ${sum}
       <div class="acts">
         <button class="s${s ? " on" : ""}" data-act="star" aria-label="行きたい" aria-pressed="${s}">${s ? "★" : "☆"}</button>
         <button class="d${d ? " on" : ""}" data-act="done" aria-label="行った" aria-pressed="${d}">✓</button>
@@ -156,6 +164,7 @@
       html += `<section class="group"><h2 id="${id}"><b>${esc(g)}</b>${items.length} ブース</h2><div class="cards">${items.map((b) => card(b, terms)).join("")}</div></section>`;
     }
     $("#list").innerHTML = html || `<p class="empty">条件に合うブースがありません。</p>`;
+    $("#list").classList.toggle("compact", state.view === "list");
     $("#jump").innerHTML = jump;
     $("#count").textContent = `${list.length} / ${booths.length} ブース　★${stars.size}　✓${done.size}`;
     // 絞り込みで一覧が変わったら、見えている先頭のブースを地図に出し直す
@@ -170,14 +179,18 @@
   }
 
   // ---------- events ----------
-  document.querySelectorAll(".seg button").forEach((btn) => {
-    btn.setAttribute("aria-pressed", String(btn.dataset.day === state.day));
-    btn.addEventListener("click", () => {
-      state.day = btn.dataset.day;
-      document.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
-      saveFilters(); render();
+  // 参加日と表示の切り替え（全画面地図の土日ボタンは別に扱う）
+  for (const [sel, key] of [["[data-day]", "day"], ["[data-view]", "view"]]) {
+    const btns = document.querySelectorAll(sel);
+    btns.forEach((btn) => {
+      btn.setAttribute("aria-pressed", String(btn.dataset[key] === state[key]));
+      btn.addEventListener("click", () => {
+        state[key] = btn.dataset[key];
+        btns.forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+        saveFilters(); render();
+      });
     });
-  });
+  }
 
   for (const key of ["onlyStar", "hideDone", "onlyGames"]) {
     const btn = $("#" + key);
@@ -208,8 +221,14 @@
     const btn = e.target.closest("[data-act]");
     const cardEl = e.target.closest(".card");
     if (!btn) {
-      // リンクや紹介文の開閉以外のところを押したら、そのブースを地図に出す
-      if (cardEl && !e.target.closest("a, summary, details p")) selectBooth(booths.find((x) => x.id === Number(cardEl.dataset.id)));
+      // リンクや紹介文の開閉以外のところを押したら、そのブースを地図に出す。リスト表示では詳細も開閉する
+      if (!cardEl || e.target.closest("a, summary, details p")) return;
+      const id = Number(cardEl.dataset.id);
+      if (state.view === "list" && !e.target.closest(".body")) {
+        opened.has(id) ? opened.delete(id) : opened.add(id);
+        cardEl.classList.toggle("open", opened.has(id));
+      }
+      selectBooth(booths.find((x) => x.id === id));
       return;
     }
     const id = Number(cardEl.dataset.id);
