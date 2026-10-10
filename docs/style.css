@@ -111,7 +111,37 @@ main { padding: 0 16px 24px; max-width: 980px; margin: 0 auto; }
   grid-row: span 2; align-self: start;
   font-variant-numeric: tabular-nums; font-weight: 700; font-size: 13px;
   background: var(--bg); border-radius: 6px; padding: 2px 6px; white-space: nowrap;
+  border: 1px solid var(--line); text-align: left;
 }
+.num i { font-style: normal; font-size: 11px; margin-left: 3px; }
+.num:hover { border-color: var(--accent); }
+button.map-link { border: 1px solid var(--accent); background: transparent; color: var(--accent); border-radius: 999px; padding: 2px 10px; }
+
+/* ---- 会場マップ ---- */
+dialog.map-dlg {
+  width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0;
+  border: 0; border-radius: 0; display: none; flex-direction: column;
+}
+dialog.map-dlg[open] { display: flex; }
+.map-head {
+  display: grid; gap: 6px;
+  padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top)); border-bottom: 1px solid var(--line);
+}
+.map-row { display: flex; align-items: center; gap: 6px; }
+.map-title { flex: 1; min-width: 0; font-weight: 650; font-size: 14px; overflow-wrap: anywhere; }
+.map-head .ghost { flex: none; padding: 4px 12px; font-size: 15px; }
+.map-note { padding: 6px 12px; font-size: 13px; background: #fff4cc; color: #4a3b00; }
+.map-scroll { flex: 1; overflow: auto; background: #fff; -webkit-overflow-scrolling: touch; }
+.map-stage { position: relative; aspect-ratio: 2000 / 1310; }
+.map-stage img { display: block; width: 100%; height: 100%; max-width: none; }
+.map-mark {
+  position: absolute; border: 3px solid #e3001b; border-radius: 4px;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.85), 0 0 0 9999px rgba(0,0,0,.18);
+  animation: blink 1.2s ease-in-out infinite; pointer-events: none;
+}
+.map-mark.round { border-radius: 50%; }
+@keyframes blink { 50% { border-color: rgba(227,0,27,.25); } }
+.map-foot { padding: 6px 12px; padding-bottom: max(6px, env(safe-area-inset-bottom)); font-size: 11px; color: var(--sub); border-top: 1px solid var(--line); }
 .name { font-weight: 650; overflow-wrap: anywhere; }
 .name a { color: inherit; text-decoration: none; }
 .name a:hover { text-decoration: underline; }

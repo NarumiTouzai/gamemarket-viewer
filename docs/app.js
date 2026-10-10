@@ -127,7 +127,7 @@
       ? `<div class="links">${b.links.map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\/(www\.)?/, ""))}</a>`).join("")}</div>`
       : "";
     return `<article class="card${s ? " star" : ""}${d ? " done" : ""}" data-id="${b.id}">
-      <span class="num">${esc(b.number || "—")}</span>
+      <button class="num" data-act="map" type="button" title="会場マップで場所を見る">${esc(b.number || "—")}<i>📍</i></button>
       <div class="name"><a href="${esc(b.url)}" target="_blank" rel="noopener">${highlight(b.name, terms)}</a></div>
       <div class="acts">
         <button class="s${s ? " on" : ""}" data-act="star" aria-label="行きたい" aria-pressed="${s}">${s ? "★" : "☆"}</button>
@@ -204,6 +204,7 @@
     const btn = e.target.closest("[data-act]");
     if (!btn) return;
     const id = Number(btn.closest(".card").dataset.id);
+    if (btn.dataset.act === "map") { openMap(booths.find((x) => x.id === id)); return; }
     const set = btn.dataset.act === "star" ? stars : done;
     set.has(id) ? set.delete(id) : set.add(id);
     store.set("stars", [...stars]);
@@ -237,6 +238,83 @@
     catch { ta.select(); document.execCommand("copy"); }
     $("#copyBtn").textContent = "コピーしました";
     setTimeout(() => ($("#copyBtn").textContent = "コピー"), 1500);
+  });
+
+  // ---------- 会場マップ ----------
+  const M = window.GM_MAP;
+  const map = { booth: null, day: 1, zoom: 3 };
+  const ZOOMS = [1, 1.5, 2, 3, 4, 6];
+
+  function openMap(b) {
+    map.booth = b || null;
+    // 土曜のみ→土の地図、日曜のみ→日の地図、両日→いま選んでいる参加日
+    map.day = b && b.day === "sun" ? 2 : b && b.day === "sat" ? 1 : state.day === "sun" ? 2 : 1;
+    map.zoom = b ? 3 : 1;
+    $("#mapTitle").textContent = b ? `${b.number}　${b.name}` : "会場マップ";
+    $("#mapDlg").showModal();
+    drawMap(true);
+  }
+
+  function drawMap(recenter) {
+    const b = map.booth;
+    document.querySelectorAll("#mapDays button").forEach((x) => x.setAttribute("aria-pressed", String(+x.dataset.mday === map.day)));
+    const img = $("#mapImg");
+    if (img.getAttribute("src") !== M.images[map.day]) img.src = M.images[map.day];
+    $("#mapStage").style.width = `${map.zoom * 100}%`;
+
+    const loc = b && M.locate(b, map.day);
+    const mark = $("#mapMark");
+    mark.hidden = !loc;
+    let note = "";
+    if (b && !loc) {
+      const other = M.locate(b, 3 - map.day);
+      note = other ? `この日の地図にはありません（${map.day === 1 ? "日曜" : "土曜"}の地図に切り替えてください）` : "地図上の位置が分かりませんでした。公式の地図で確認してください。";
+    } else if (loc && loc.island) {
+      note = `${loc.island} の島（赤枠）の中で、地図に小さく書かれた番号 ${b.number.replace(/^.*?([0-9]+)$/, "$1").replace(/^0+/, "")} を探してください。`;
+    }
+    $("#mapNote").textContent = note;
+    $("#mapNote").hidden = !note;
+    if (!loc) return;
+
+    const pad = 6;
+    const [x1, y1, x2, y2] = loc.pt ? [loc.pt[0] - 20, loc.pt[1] - 20, loc.pt[0] + 20, loc.pt[1] + 20] : loc.box;
+    Object.assign(mark.style, {
+      left: `${((x1 - pad) / M.W) * 100}%`, top: `${((y1 - pad) / M.H) * 100}%`,
+      width: `${((x2 - x1 + pad * 2) / M.W) * 100}%`, height: `${((y2 - y1 + pad * 2) / M.H) * 100}%`,
+    });
+    mark.classList.toggle("round", !!loc.pt);
+    if (recenter) centerOn((x1 + x2) / 2 / M.W, (y1 + y2) / 2 / M.H);
+  }
+
+  // 地図上の割合 (fx, fy) が画面の真ん中に来るようにスクロール
+  function centerOn(fx, fy) {
+    const sc = $("#mapScroll"), st = $("#mapStage");
+    requestAnimationFrame(() => {
+      sc.scrollLeft = fx * st.offsetWidth - sc.clientWidth / 2;
+      sc.scrollTop = fy * st.offsetWidth * (M.H / M.W) - sc.clientHeight / 2;
+    });
+  }
+
+  function zoomBy(dir) {
+    const sc = $("#mapScroll"), st = $("#mapStage");
+    const fx = (sc.scrollLeft + sc.clientWidth / 2) / st.offsetWidth;
+    const fy = (sc.scrollTop + sc.clientHeight / 2) / (st.offsetWidth * (M.H / M.W));
+    const i = ZOOMS.indexOf(map.zoom) + dir;
+    if (i < 0 || i >= ZOOMS.length) return;
+    map.zoom = ZOOMS[i];
+    drawMap(false);
+    centerOn(fx, fy);
+  }
+
+  $("#openMap").addEventListener("click", () => openMap(null));
+  $("#mapClose").addEventListener("click", () => $("#mapDlg").close());
+  $("#zoomIn").addEventListener("click", () => zoomBy(1));
+  $("#zoomOut").addEventListener("click", () => zoomBy(-1));
+  $("#mapDays").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-mday]");
+    if (!btn) return;
+    map.day = +btn.dataset.mday;
+    drawMap(true);
   });
 
   load();

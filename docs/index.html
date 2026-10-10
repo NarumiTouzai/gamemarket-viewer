@@ -11,7 +11,7 @@
   <header class="bar">
     <div class="bar-top">
       <h1>ゲムマ2026秋 <span>ブース一覧</span></h1>
-      <a class="map-link" href="https://gamemarket.jp/map" target="_blank" rel="noopener">公式MAP ↗</a>
+      <button id="openMap" class="map-link" type="button">🗺 会場マップ</button>
     </div>
 
     <input id="q" type="search" placeholder="ブース名・ゲーム名・紹介文で検索" autocomplete="off">
@@ -58,6 +58,32 @@
     </form>
   </dialog>
 
+  <dialog id="mapDlg" class="map-dlg">
+    <div class="map-head">
+      <div class="map-row">
+        <div id="mapTitle" class="map-title"></div>
+        <button id="mapClose" class="ghost" type="button">閉じる</button>
+      </div>
+      <div class="map-row">
+        <div class="seg" id="mapDays">
+          <button data-mday="1" type="button">土 10/17</button>
+          <button data-mday="2" type="button">日 10/18</button>
+        </div>
+        <button id="zoomOut" class="ghost" type="button" aria-label="縮小">－</button>
+        <button id="zoomIn" class="ghost" type="button" aria-label="拡大">＋</button>
+      </div>
+    </div>
+    <div id="mapNote" class="map-note"></div>
+    <div id="mapScroll" class="map-scroll">
+      <div id="mapStage" class="map-stage">
+        <img id="mapImg" alt="会場マップ">
+        <div id="mapMark" class="map-mark" hidden></div>
+      </div>
+    </div>
+    <div class="map-foot">地図は<a href="https://gamemarket.jp/map" target="_blank" rel="noopener">公式のホールマップ</a>。赤枠の位置は手作業で合わせた目安です。</div>
+  </dialog>
+
+  <script src="mapdata.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
