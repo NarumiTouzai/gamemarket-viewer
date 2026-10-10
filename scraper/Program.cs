@@ -90,7 +90,7 @@ if (!opt.NoDetails)
         i++;
         var b = booths[id];
         if (!opt.Refresh && previous.TryGetValue(id, out var prev) && prev.DetailFetchedAt is not null
-            && !(prev.Image is null && b.Type == "特設")) // ブース画像を取る前のデータしかない特設は取り直す
+            && !(prev.Image is null && b.Type is "特設" or "エリア")) // ブース画像を取る前のデータしかない特設・エリアは取り直す
         {
             b.Games = prev.Games; b.Description = prev.Description; b.Links = prev.Links; b.Image = prev.Image; b.DetailFetchedAt = prev.DetailFetchedAt;
             continue;

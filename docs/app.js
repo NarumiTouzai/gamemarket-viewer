@@ -71,7 +71,10 @@
       if (!res.ok) throw new Error(res.status);
       const data = await res.json();
       booths = data.booths.map((b, i) => {
-        const guide = (window.GM_SPECIAL || {})[(b.number || "").replace(/\s+/g, "")] || null;
+        // 特設は specials.js、エリアは areas.js（番号 "エリア - 04" → "04"）
+        const num = (b.number || "").replace(/\s+/g, "");
+        const areaNo = (num.match(/^エリア-?(\d+)/) || [])[1];
+        const guide = (window.GM_SPECIAL || {})[num] || (areaNo && (window.GM_AREA || {})[areaNo.padStart(2, "0")]) || null;
         const description = cleanDesc(b.description);
         return {
           ...b,
@@ -132,6 +135,15 @@
     return t.trim() || null;
   }
 
+  // 種類の見出し。エリアの出展ジャンルは公式ホールマップと同じ色にする
+  const KIND_COLOR = {
+    "ボードゲーム": "#e5b845", "トレカ": "#87ae5d", "制作者支援": "#ecd0cd",
+    "謎解き": "#cad650", "TRPG": "#c87048", "マーダーミステリー": "#957aa2",
+  };
+  const kindChip = (k) => KIND_COLOR[k]
+    ? `<span class="kind" style="background:${KIND_COLOR[k]};color:#1d232b">${esc(k)}</span>`
+    : `<span class="kind">${esc(k)}</span>`;
+
   // リンクの表示用の文字（https:// を外し、%E3… を日本語に戻す）
   function linkLabel(u) {
     const s = u.replace(/^https?:\/\/(www\.)?/, "");
@@ -153,17 +165,17 @@
       : "";
     // 特設ブースのサムネイル。画像は公式サーバーのものをそのまま表示する（こちらには保存しない）。
     // 公式には「thumb_」を付けた小さい版があるのでそれを使う。読めなければ枠ごと消す
-    const thumb = b.type === "特設" && b.image
+    const thumb = (b.type === "特設" || b.type === "エリア") && b.image
       ? `<a class="thumb" href="${esc(b.url)}" target="_blank" rel="noopener"><img loading="lazy" alt="" src="${esc(b.image.replace(/\/([^/]+)$/, "/thumb_$1"))}" onerror="this.parentElement.remove()"></a>`
       : "";
     // リスト表示で1行に収める、ゲーム名の要約
     // 特設ブースは「どんな場所か」（specials.js）を出す
     const g = b.guide;
     const guide = g
-      ? `<div class="guide"><span class="kind">${esc(g.kind)}</span>${g.tags.map((t) => `<span class="gtag">${esc(t)}</span>`).join("")}<p>${highlight(g.text, terms)}</p></div>`
+      ? `<div class="guide">${kindChip(g.kind)}${g.tags.map((t) => `<span class="gtag">${esc(t)}</span>`).join("")}<p>${highlight(g.text, terms)}</p></div>`
       : "";
     const sum = `<div class="sum">${b.day !== "both" ? `<span class="tag ${b.day}">${dayLabel[b.day]}</span>` : ""}${
-      g ? `<span class="kind">${esc(g.kind)}</span>${esc(g.text)}`
+      g ? `${kindChip(g.kind)}${esc(g.text)}`
       : b.games.length
         ? `${b.games.slice(0, 3).map((g) => highlight(g.title || "", terms)).join(" / ")}${b.games.length > 3 ? ` ほか${b.games.length - 3}件` : ""}`
         : `<span class="none">ゲーム登録なし</span>`}</div>`;
