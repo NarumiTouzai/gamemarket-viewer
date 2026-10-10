@@ -115,6 +115,12 @@
     return { list, terms };
   }
 
+  // リンクの表示用の文字（https:// を外し、%E3… を日本語に戻す）
+  function linkLabel(u) {
+    const s = u.replace(/^https?:\/\/(www\.)?/, "");
+    try { return decodeURIComponent(s); } catch { return s; }
+  }
+
   function card(b, terms) {
     const s = stars.has(b.id), d = done.has(b.id);
     const games = b.games.length
@@ -126,7 +132,7 @@
       ? `<details class="desc"${descHit ? " open" : ""}><summary>紹介文</summary><p>${highlight(b.description, terms)}</p></details>`
       : "";
     const links = (b.links || []).length
-      ? `<div class="links">${b.links.map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\/(www\.)?/, ""))}</a>`).join("")}</div>`
+      ? `<div class="links">${b.links.map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener" title="${esc(u)}">${esc(linkLabel(u))}</a>`).join("")}</div>`
       : "";
     // 特設ブースのサムネイル。画像は公式サーバーのものをそのまま表示する（こちらには保存しない）。
     // 公式には「thumb_」を付けた小さい版があるのでそれを使う。読めなければ枠ごと消す
@@ -499,6 +505,53 @@
     showMini(b, true);
   }
 
+
+  // つまみをドラッグして地図の大きさを変える。広い画面は地図の幅、スマホは地図の高さ。端末に保存する
+  const wideMQ = matchMedia("(min-width: 1000px)");
+  const sizes = store.get("mapSize", {}); // { w: 幅px, h: 高さpx }
+  function applyMapSize() {
+    const root = document.documentElement.style;
+    sizes.w ? root.setProperty("--map-w", `${sizes.w}px`) : root.removeProperty("--map-w");
+    sizes.h ? root.setProperty("--map-h", `${sizes.h}px`) : root.removeProperty("--map-h");
+  }
+  applyMapSize();
+  {
+    const grip = $("#miniGrip");
+    let dragging = false, start = null;
+    grip.addEventListener("pointerdown", (e) => {
+      dragging = true;
+      // つかんだ位置からの移動量だけ大きさを変える（つかんだ瞬間に跳ねないように）
+      start = { x: e.clientX, y: e.clientY, w: $("#mini").offsetWidth, h: $("#miniScroll").offsetHeight };
+      grip.setPointerCapture(e.pointerId);
+      grip.classList.add("dragging");
+      e.preventDefault();
+    });
+    grip.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      if (wideMQ.matches) {
+        sizes.w = Math.round(Math.min(Math.max(start.w - (e.clientX - start.x), 320), window.innerWidth - 360));
+      } else {
+        sizes.h = Math.round(Math.min(Math.max(start.h + (e.clientY - start.y), 100), window.innerHeight * 0.6));
+      }
+      applyMapSize();
+    });
+    const end = () => {
+      if (!dragging) return;
+      dragging = false;
+      grip.classList.remove("dragging");
+      store.set("mapSize", sizes);
+      updateBarHeight();
+      showMini(current, false);
+    };
+    grip.addEventListener("pointerup", end);
+    grip.addEventListener("pointercancel", end);
+    // ダブルクリック（ダブルタップ）で元の大きさに戻す
+    grip.addEventListener("dblclick", () => {
+      delete sizes[wideMQ.matches ? "w" : "h"];
+      store.set("mapSize", sizes);
+      applyMapSize(); updateBarHeight(); showMini(current, false);
+    });
+  }
 
   $("#miniHide").addEventListener("click", () => setMiniHidden(!miniHidden));
   $("#miniBig").addEventListener("click", () => openMap(current));

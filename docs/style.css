@@ -99,9 +99,10 @@ main { padding: 0 16px 24px; max-width: 980px; margin: 0 auto; }
 }
 .group h2 b { color: var(--ink); font-size: 15px; margin-right: 6px; }
 .cards { display: grid; gap: 8px; }
-@media (min-width: 760px) { .cards { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 760px) { .cards { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 
 .card {
+  min-width: 0;
   background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
   padding: 10px 12px; display: grid; grid-template-columns: auto 1fr auto; gap: 2px 10px;
   align-content: start; /* 隣のカードが高いときも、中身は上に詰める */
@@ -161,13 +162,20 @@ button.map-link { border: 1px solid var(--accent); background: transparent; colo
 .mini-title { flex: 1; min-width: 0; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mini-cap .ghost { flex: none; font-size: 12px; padding: 2px 8px; }
 .mini-note { padding: 2px 16px 4px; font-size: 12px; color: var(--sub); }
-.mini-scroll { height: clamp(150px, 30vh, 360px); flex: none; }
+.mini-scroll { height: var(--map-h, clamp(140px, 26vh, 320px)); flex: none; }
+/* 地図の大きさを変えるつまみ。スマホは地図の下の横棒、広い画面は地図の左端 */
+.mini-grip {
+  height: 14px; cursor: row-resize; touch-action: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.mini-grip::before { content: ""; width: 44px; height: 4px; border-radius: 2px; background: var(--line); }
+.mini-grip:hover::before, .mini-grip.dragging::before { background: var(--accent); }
 /* 広い画面: 左に一覧、右に地図（画面の高さいっぱいで固定） */
 @media (min-width: 1000px) {
-  .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(420px, 48%); align-items: start; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) var(--map-w, clamp(380px, 40%, 720px)); align-items: start; }
   .listcol { grid-column: 1; grid-row: 1; }
   .listcol main { max-width: none; }
-  .listcol .cards { grid-template-columns: 1fr; }
+  .listcol .cards { grid-template-columns: minmax(0, 1fr); }
   .mini {
     grid-column: 2; grid-row: 1; height: calc(100dvh - var(--bar-h, 0px));
     display: flex; flex-direction: column; border-bottom: 0; border-left: 1px solid var(--line);
@@ -176,8 +184,10 @@ button.map-link { border: 1px solid var(--accent); background: transparent; colo
   #miniBody { flex: 1; display: flex; flex-direction: column; min-height: 0; }
   #miniBody[hidden] { display: none; }
   .mini-scroll { flex: 1; height: auto; }
+  .mini-grip { position: absolute; left: -6px; top: 0; bottom: 0; width: 12px; height: auto; cursor: col-resize; }
+  .mini-grip::before { width: 4px; height: 44px; }
 }
-@media (min-width: 1400px) { .listcol .cards { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1400px) { .listcol .cards { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 
 /* ---- 会場マップ ---- */
 dialog.map-dlg {
@@ -244,7 +254,9 @@ details.desc summary::-webkit-details-marker { display: none; }
 details.desc summary::before { content: "▸ "; }
 details.desc[open] summary::before { content: "▾ "; }
 details.desc p { white-space: pre-line; margin: 4px 0 0; }
-.links { margin-top: 4px; font-size: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+.links { margin-top: 4px; font-size: 12px; display: flex; flex-wrap: wrap; gap: 4px 8px; }
+/* 長いURLは画面幅で「…」にする（そのままだとページが横に広がる） */
+.links a { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 mark { background: #ffe58a; color: #1d232b; border-radius: 2px; }
 
 .empty { text-align: center; color: var(--sub); padding: 40px 0; }
