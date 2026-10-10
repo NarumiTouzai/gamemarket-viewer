@@ -395,6 +395,28 @@
   new ResizeObserver(() => { updateBarHeight(); if (current) showMini(current, false); }).observe($(".bar"));
   window.addEventListener("resize", updateBarHeight);
 
+  // PC ではマウスで地図をつかんで動かせるようにする（スマホ・タブレットは指でそのまま動く）
+  function dragToPan(sc) {
+    let drag = null;
+    sc.addEventListener("pointerdown", (e) => {
+      if (e.pointerType !== "mouse" || e.button !== 0) return;
+      drag = { x: e.clientX, y: e.clientY, l: sc.scrollLeft, t: sc.scrollTop };
+      sc.setPointerCapture(e.pointerId);
+      sc.classList.add("grabbing");
+      e.preventDefault();
+    });
+    sc.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      sc.scrollLeft = drag.l - (e.clientX - drag.x);
+      sc.scrollTop = drag.t - (e.clientY - drag.y);
+    });
+    const end = () => { drag = null; sc.classList.remove("grabbing"); };
+    sc.addEventListener("pointerup", end);
+    sc.addEventListener("pointercancel", end);
+  }
+  dragToPan($("#miniScroll"));
+  dragToPan($("#mapScroll"));
+
   $("#miniHide").addEventListener("click", () => setMiniHidden(!miniHidden));
   $("#miniBig").addEventListener("click", () => openMap(current));
 

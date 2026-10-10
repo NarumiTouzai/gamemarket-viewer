@@ -162,7 +162,13 @@ dialog.map-dlg[open] { display: flex; }
 .map-title { flex: 1; min-width: 0; font-weight: 650; font-size: 14px; overflow-wrap: anywhere; }
 .map-head .ghost { flex: none; padding: 4px 12px; font-size: 15px; }
 .map-note { padding: 6px 12px; font-size: 13px; background: #fff4cc; color: #4a3b00; }
-.map-scroll { flex: 1; overflow: auto; background: #fff; -webkit-overflow-scrolling: touch; }
+.map-scroll {
+  flex: 1; overflow: auto; background: #fff; -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain; /* 地図の端まで動かしても、一覧のほうはスクロールさせない */
+  cursor: grab; user-select: none;
+}
+.map-scroll.grabbing { cursor: grabbing; }
+.map-scroll img { -webkit-user-drag: none; }
 .map-stage { position: relative; aspect-ratio: 2000 / 1310; }
 .map-stage img { display: block; width: 100%; height: 100%; max-width: none; }
 .map-mark {
