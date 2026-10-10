@@ -104,6 +104,7 @@ main { padding: 0 16px 24px; max-width: 980px; margin: 0 auto; }
 .card {
   background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
   padding: 10px 12px; display: grid; grid-template-columns: auto 1fr auto; gap: 2px 10px;
+  align-content: start; /* 隣のカードが高いときも、中身は上に詰める */
 }
 .card.star { border-color: var(--star); box-shadow: inset 4px 0 0 var(--star); }
 .card.done { opacity: .55; }
@@ -225,7 +226,12 @@ dialog.map-dlg[open] { display: flex; }
 .tag.sat { background: var(--tag-sat); }
 .tag.sun { background: var(--tag-sun); }
 .tag.type { background: transparent; color: var(--sub); border: 1px solid var(--line); }
-.body { grid-column: 1 / -1; }
+.body { grid-column: 1 / -1; min-width: 0; }
+.thumb { display: block; margin-top: 6px; width: 100%; max-width: 280px; }
+.thumb img {
+  display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: contain;
+  background: #fff; border: 1px solid var(--line); border-radius: 6px;
+}
 .games { margin: 6px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px; }
 .games a {
   display: inline-block; font-size: 13px; text-decoration: none;

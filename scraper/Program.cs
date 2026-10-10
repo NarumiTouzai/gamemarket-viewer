@@ -89,9 +89,10 @@ if (!opt.NoDetails)
     {
         i++;
         var b = booths[id];
-        if (!opt.Refresh && previous.TryGetValue(id, out var prev) && prev.DetailFetchedAt is not null)
+        if (!opt.Refresh && previous.TryGetValue(id, out var prev) && prev.DetailFetchedAt is not null
+            && !(prev.Image is null && b.Type == "特設")) // ブース画像を取る前のデータしかない特設は取り直す
         {
-            b.Games = prev.Games; b.Description = prev.Description; b.Links = prev.Links; b.DetailFetchedAt = prev.DetailFetchedAt;
+            b.Games = prev.Games; b.Description = prev.Description; b.Links = prev.Links; b.Image = prev.Image; b.DetailFetchedAt = prev.DetailFetchedAt;
             continue;
         }
         try
@@ -106,7 +107,7 @@ if (!opt.NoDetails)
         catch (Exception e)
         {
             Console.WriteLine($"  詳細取得失敗 {b.Url}: {e.Message}");
-            if (previous.TryGetValue(id, out var p)) { b.Games = p.Games; b.Description = p.Description; b.Links = p.Links; }
+            if (previous.TryGetValue(id, out var p)) { b.Games = p.Games; b.Description = p.Description; b.Links = p.Links; b.Image = p.Image; }
         }
     }
     Console.WriteLine($"詳細: 今回 {fetched} 件取得、{order.Count - fetched} 件は前回データを利用");
@@ -115,7 +116,7 @@ else
 {
     foreach (var id in order)
         if (previous.TryGetValue(id, out var p))
-        { var b = booths[id]; b.Games = p.Games; b.Description = p.Description; b.Links = p.Links; b.DetailFetchedAt = p.DetailFetchedAt; }
+        { var b = booths[id]; b.Games = p.Games; b.Description = p.Description; b.Links = p.Links; b.Image = p.Image; b.DetailFetchedAt = p.DetailFetchedAt; }
 }
 
 // ---- 3. 保存 ----
@@ -208,6 +209,8 @@ class Booth
     public string? Description { get; set; }
     public List<GameRef> Games { get; set; } = new();
     public List<string> Links { get; set; } = new();
+    /// <summary>ブース画像のURL（公式サーバー上。こちらでは保存しない）</summary>
+    public string? Image { get; set; }
     public DateTimeOffset? DetailFetchedAt { get; set; }
 }
 
@@ -236,6 +239,8 @@ static class Parser
     static readonly Regex Total = new(@"ブース一覧\s*[（(]\s*(?<n>[\d,]+)\s*件", RO);
     static readonly Regex ScriptStyle = new(@"<(script|style|noscript|svg)\b.*?</\1\s*>", RO);
     static readonly Regex BlockTag = new(@"<\s*(br|/p|/div|/li|/dd|/dt|/h\d|/tr|/section|/article)\b[^>]*>", RO);
+    // ブース画像: <div class="image"><figure><img src="https://img.gamemarket.jp/..."> の最初の1枚
+    static readonly Regex BoothImage = new(@"<div\s+class\s*=\s*[""']image[""'][^>]*>\s*<figure[^>]*>\s*<img[^>]+src\s*=\s*[""'](?<u>https://img\.gamemarket\.jp/[^""']+)[""']", RO);
     static readonly Regex AnyTag = new(@"<[^>]+>", RO);
     static readonly Regex Sns = new(@"https?://(?:www\.)?(?:x\.com|twitter\.com|bsky\.app/profile|instagram\.com|youtube\.com|booth\.pm|[\w-]+\.booth\.pm)[^\s""'<>]*", RO);
 
@@ -319,6 +324,8 @@ static class Parser
     public static void ApplyDetail(Booth b, string html)
     {
         var content = MainContent(html);
+        // 画像がないブースは "" にして、「まだ調べていない(null)」と区別する
+        b.Image = BoothImage.Match(html) is { Success: true } im ? Decode(im.Groups["u"].Value) : "";
 
         var games = new Dictionary<int, GameRef>();
         foreach (Match m in GameAnchor.Matches(content))

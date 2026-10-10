@@ -128,6 +128,11 @@
     const links = (b.links || []).length
       ? `<div class="links">${b.links.map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\/(www\.)?/, ""))}</a>`).join("")}</div>`
       : "";
+    // 特設ブースのサムネイル。画像は公式サーバーのものをそのまま表示する（こちらには保存しない）。
+    // 公式には「thumb_」を付けた小さい版があるのでそれを使う。読めなければ枠ごと消す
+    const thumb = b.type === "特設" && b.image
+      ? `<a class="thumb" href="${esc(b.url)}" target="_blank" rel="noopener"><img loading="lazy" alt="" src="${esc(b.image.replace(/\/([^/]+)$/, "/thumb_$1"))}" onerror="this.parentElement.remove()"></a>`
+      : "";
     // リスト表示で1行に収める、ゲーム名の要約
     const sum = `<div class="sum">${b.day !== "both" ? `<span class="tag ${b.day}">${dayLabel[b.day]}</span>` : ""}${
       b.games.length
@@ -146,7 +151,7 @@
         ${b.type ? `<span class="tag type">${esc(b.type)}</span>` : ""}
         ${b.games.length ? `<span class="tag type">ゲーム ${b.games.length}</span>` : ""}
       </div>
-      <div class="body">${games}${desc}${links}</div>
+      <div class="body">${thumb}${games}${desc}${links}</div>
     </article>`;
   }
 
