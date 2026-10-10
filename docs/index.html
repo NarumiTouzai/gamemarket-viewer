@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>ゲムマ2026秋 ブース一覧</title>
+  <meta name="theme-color" content="#1f3a5f">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="bar">
+    <div class="bar-top">
+      <h1>ゲムマ2026秋 <span>ブース一覧</span></h1>
+      <a class="map-link" href="https://gamemarket.jp/map" target="_blank" rel="noopener">公式MAP ↗</a>
+    </div>
+
+    <input id="q" type="search" placeholder="ブース名・ゲーム名・紹介文で検索" autocomplete="off">
+
+    <div class="filters">
+      <div class="seg" role="radiogroup" aria-label="参加日">
+        <button data-day="sat" aria-pressed="true">土曜 10/17</button>
+        <button data-day="sun" aria-pressed="false">日曜 10/18</button>
+        <button data-day="all" aria-pressed="false">全部</button>
+      </div>
+      <div class="chips" id="types" aria-label="ブースタイプ"></div>
+      <div class="chips">
+        <button id="onlyStar" class="chip" aria-pressed="false">★ 行きたいだけ</button>
+        <button id="hideDone" class="chip" aria-pressed="false">✓ 行った を隠す</button>
+        <button id="onlyGames" class="chip" aria-pressed="false">ゲーム登録ありだけ</button>
+      </div>
+    </div>
+
+    <div class="status">
+      <span id="count"></span>
+      <span class="spacer"></span>
+      <button id="export" class="ghost">★リストをコピー</button>
+    </div>
+  </header>
+
+  <nav id="jump" class="jump" aria-label="ブロックへ移動"></nav>
+
+  <main id="list" aria-live="polite"></main>
+
+  <footer class="foot">
+    <p id="meta"></p>
+    <p>データは<a href="https://gamemarket.jp/booth" target="_blank" rel="noopener">ゲームマーケット公式サイトのブース一覧</a>から自動取得した非公式のまとめです。最新・正確な情報は公式サイトとカタログで確認してください。★と✓はこの端末のブラウザにだけ保存されます。</p>
+  </footer>
+
+  <dialog id="exportDlg">
+    <form method="dialog">
+      <h2>★ 行きたいリスト</h2>
+      <p class="hint">ブース番号順に並べています。メモアプリなどに貼り付けて使えます。</p>
+      <textarea id="exportText" rows="14" readonly></textarea>
+      <div class="dlg-actions">
+        <button id="copyBtn" type="button">コピー</button>
+        <button value="close">閉じる</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>

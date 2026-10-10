@@ -1,0 +1,74 @@
+name: ブース一覧を更新
+
+on:
+  workflow_dispatch:
+    inputs:
+      refresh:
+        description: "取得済みのブース詳細も全部取り直す（時間がかかります）"
+        type: boolean
+        default: false
+  schedule:
+    # 毎日 3:00 JST（UTC 18:00）。イベントが終わったら Actions 画面からこのワークフローを Disable してください
+    - cron: "7 18 * * *"
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: 公式サイトから取得
+        run: |
+          ARGS="--event 2026a --out docs/data/booths.json"
+          if [ "${{ inputs.refresh }}" = "true" ]; then ARGS="$ARGS --refresh"; fi
+          dotnet run --project scraper -c Release -- $ARGS
+
+      - name: 解析用に取得した HTML を残す
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-html
+          path: debug/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: データをコミット
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add docs/data/booths.json
+          if git diff --cached --quiet; then
+            echo "変更なし"
+          else
+            git commit -m "ブースデータ更新 $(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M')"
+            git push
+          fi
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    needs: scrape
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

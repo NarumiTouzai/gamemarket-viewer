@@ -1,0 +1,247 @@
+{
+ "event": "2026a",
+ "generatedAt": "2026-10-10T00:00:00Z",
+ "source": "sample",
+ "booths": [
+  {
+   "id": 9001,
+   "name": "サンプル特設ブース",
+   "type": "特設",
+   "number": "特設01",
+   "day": "both",
+   "url": "https://gamemarket.jp/booth/9001",
+   "games": [],
+   "links": []
+  },
+  {
+   "id": 9002,
+   "name": "サンプル特設（日曜限定）",
+   "type": "特設",
+   "number": "特設02",
+   "day": "sun",
+   "url": "https://gamemarket.jp/booth/9002",
+   "games": [],
+   "links": []
+  },
+  {
+   "id": 9003,
+   "name": "サンプル企業1",
+   "type": "エリア",
+   "number": "エリア - 01",
+   "day": "both",
+   "url": "https://gamemarket.jp/booth/9003",
+   "description": "新作の先行販売あり。\n試遊できます。",
+   "games": [
+    {
+     "id": 80030,
+     "title": "サンプルゲーム3-1",
+     "url": "https://gamemarket.jp/game/80030"
+    },
+    {
+     "id": 80031,
+     "title": "サンプルゲーム3-2",
+     "url": "https://gamemarket.jp/game/80031"
+    }
+   ],
+   "links": [
+    "https://x.com/example"
+   ]
+  },
+  {
+   "id": 9004,
+   "name": "サンプル企業2",
+   "type": "エリア",
+   "number": "エリア - 02",
+   "day": "both",
+   "url": "https://gamemarket.jp/booth/9004",
+   "description": "新作の先行販売あり。\n試遊できます。",
+   "games": [
+    {
+     "id": 80040,
+     "title": "サンプルゲーム4-1",
+     "url": "https://gamemarket.jp/game/80040"
+    },
+    {
+     "id": 80041,
+     "title": "サンプルゲーム4-2",
+     "url": "https://gamemarket.jp/game/80041"
+    }
+   ],
+   "links": [
+    "https://x.com/example"
+   ]
+  },
+  {
+   "id": 9005,
+   "name": "サンプル企業3",
+   "type": "エリア",
+   "number": "エリア - 03",
+   "day": "both",
+   "url": "https://gamemarket.jp/booth/9005",
+   "description": "新作の先行販売あり。\n試遊できます。",
+   "games": [
+    {
+     "id": 80050,
+     "title": "サンプルゲーム5-1",
+     "url": "https://gamemarket.jp/game/80050"
+    },
+    {
+     "id": 80051,
+     "title": "サンプルゲーム5-2",
+     "url": "https://gamemarket.jp/game/80051"
+    }
+   ],
+   "links": [
+    "https://x.com/example"
+   ]
+  },
+  {
+   "id": 9006,
+   "name": "さんぷる土曜サークル1",
+   "type": "一般土曜",
+   "number": "土A-01",
+   "day": "sat",
+   "url": "https://gamemarket.jp/booth/9006",
+   "games": [
+    {
+     "id": 80060,
+     "title": "サンプルゲーム6-1",
+     "url": "https://gamemarket.jp/game/80060"
+    }
+   ],
+   "links": [
+    "https://x.com/example"
+   ]
+  },
+  {
+   "id": 9007,
+   "name": "さんぷる土曜サークル2",
+   "type": "一般土曜",
+   "number": "土A-02",
+   "day": "sat",
+   "url": "https://gamemarket.jp/booth/9007",
+   "games": [
+    {
+     "id": 80070,
+     "title": "サンプルゲーム7-1",
+     "url": "https://gamemarket.jp/game/80070"
+    }
+   ],
+   "links": [
+    "https://x.com/example"
+   ]
+  },
+  {
+   "id": 9008,
+   "name": "さんぷる土曜サークル3",
+   "type": "一般土曜",
+   "number": "土A-03",
+   "day": "sat",
+   "url": "https://gamemarket.jp/booth/9008",
+   "games": [
+    {
+     "id": 80080,
+     "title": "サンプルゲーム8-1",
+     "url": "https://gamemarket.jp/game/80080"
+    }
+   ],
+   "links": [
+    "https://x.com/example"
+   ]
+  },
+  {
+   "id": 9009,
+   "name": "サンプル日曜サークル1",
+   "type": "一般日曜",
+   "number": "日B-01",
+   "day": "sun",
+   "url": "https://gamemarket.jp/booth/9009",
+   "games": [
+    {
+     "id": 80090,
+     "title": "サンプルゲーム9-1",
+     "url": "https://gamemarket.jp/game/80090"
+    }
+   ],
+   "links": [
+    "https://x.com/example"
+   ]
+  },
+  {
+   "id": 9010,
+   "name": "サンプル日曜サークル2",
+   "type": "一般日曜",
+   "number": "日B-02",
+   "day": "sun",
+   "url": "https://gamemarket.jp/booth/9010",
+   "games": [
+    {
+     "id": 80100,
+     "title": "サンプルゲーム10-1",
+     "url": "https://gamemarket.jp/game/80100"
+    }
+   ],
+   "links": [
+    "https://x.com/example"
+   ]
+  },
+  {
+   "id": 9011,
+   "name": "サンプル両日サークル1",
+   "type": "一般両日",
+   "number": "C-01",
+   "day": "both",
+   "url": "https://gamemarket.jp/booth/9011",
+   "description": "協力型カードゲーム",
+   "games": [
+    {
+     "id": 80110,
+     "title": "サンプルゲーム11-1",
+     "url": "https://gamemarket.jp/game/80110"
+    },
+    {
+     "id": 80111,
+     "title": "サンプルゲーム11-2",
+     "url": "https://gamemarket.jp/game/80111"
+    },
+    {
+     "id": 80112,
+     "title": "サンプルゲーム11-3",
+     "url": "https://gamemarket.jp/game/80112"
+    }
+   ],
+   "links": [
+    "https://x.com/example"
+   ]
+  },
+  {
+   "id": 9012,
+   "name": "サンプル両日サークル2",
+   "type": "一般両日",
+   "number": "C-02",
+   "day": "both",
+   "url": "https://gamemarket.jp/booth/9012",
+   "description": "協力型カードゲーム",
+   "games": [
+    {
+     "id": 80120,
+     "title": "サンプルゲーム12-1",
+     "url": "https://gamemarket.jp/game/80120"
+    },
+    {
+     "id": 80121,
+     "title": "サンプルゲーム12-2",
+     "url": "https://gamemarket.jp/game/80121"
+    },
+    {
+     "id": 80122,
+     "title": "サンプルゲーム12-3",
+     "url": "https://gamemarket.jp/game/80122"
+    }
+   ],
+   "links": [
+    "https://x.com/example"
+   ]
+  }
+ ]
+}
