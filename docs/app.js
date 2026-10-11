@@ -357,7 +357,7 @@
     const d = decIds(h.get("d")).filter((id) => known.has(id));
     const clearHash = () => history.replaceState(null, "", location.pathname + location.search);
     if (!s.length && !d.length) { clearHash(); return; }
-    $("#importMsg").textContent = `共有された ★${s.length}件・✓${d.length}件 を取り込みますか？（この端末には今 ★${stars.size}件・✓${done.size}件）`;
+    $("#importMsg").textContent = `共有用URL（QRコード）から開きました。別の端末の ★${s.length}件・✓${d.length}件 を、この端末に取り込みますか？ いまこの端末には ★${stars.size}件・✓${done.size}件 あります。`;
     $("#importBar").hidden = false;
     const finish = (mode) => {
       if (mode === "replace") { stars.clear(); done.clear(); }

@@ -28,6 +28,8 @@
 }
 
 * { box-sizing: border-box; }
+/* hidden を付けた要素は、display を指定したクラスがあっても必ず隠す */
+[hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
