@@ -716,8 +716,10 @@
 
   // 地図を押したら、その場所のブースへ一覧を移動する。
   // エリア・特設はそのブース、一般ブースの島は島の先頭のブースへ
+  let gripTouchedAt = 0;
   function tapToJump(sc, v, afterJump) {
     sc.addEventListener("click", (e) => {
+      if (Date.now() - gripTouchedAt < 600) return; // つまみを触った直後のクリックは無視
       if (sc.dataset.moved === "true") { sc.dataset.moved = "false"; return; }
       const r = sc.querySelector(".map-stage").getBoundingClientRect();
       const x = ((e.clientX - r.left) / r.width) * M.W, y = ((e.clientY - r.top) / r.height) * M.H;
@@ -790,14 +792,18 @@
       if (!dragging) return;
       dragging = false;
       grip.classList.remove("dragging");
-      // 動かさずに離した＝タップ。小→中→大→小…と切り替える
-      if (!start.moved) cycleSize();
+      // つまみを触った直後は、地図を押しても反応しないようにする（指を離したあとに届くクリックの合図が、
+      // 大きさが変わって指の下に来た地図に当たり、勝手にブースへ移動してしまうのを防ぐ）
+      gripTouchedAt = Date.now();
       gripLearned();
       store.set("mapSize", sizes);
       updateBarHeight();
       showMini(current, false);
     };
     grip.addEventListener("pointerup", end);
+    // 動かさずに離した＝タップ。大きさの切り替えは、指を離したあとのクリックの合図を受けてから行う
+    // （指を離した瞬間に切り替えると、そのあとのクリックの合図が地図に届いてしまう）
+    grip.addEventListener("click", () => { if (start && !start.moved) { cycleSize(); updateBarHeight(); showMini(current, false); } });
     grip.addEventListener("pointercancel", end);
     // タップで切り替える大きさ。スマホは画面の高さに対する割合、広い画面は画面の幅に対する割合
     function cycleSize() {
