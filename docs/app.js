@@ -101,7 +101,10 @@
     }
     buildTypeChips();
     render();
+    offerImport();
   }
+  // すでに開いているページで共有URLを開いたとき
+  window.addEventListener("hashchange", () => booths.length && offerImport());
 
   // ---------- UI ----------
   function buildTypeChips() {
@@ -319,8 +322,59 @@
     $("#exportText").value = rows.length
       ? `ゲムマ2026秋 行きたいブース（${rows.length}件）\n\n${rows.join("\n")}`
       : "☆ を押して行きたいブースを選んでください。";
+    // 他の端末に移す用の URL と QR コード
+    const url = shareUrl();
+    $("#shareUrl").value = url;
+    $("#shareQr").innerHTML = "";
+    if (window.QRCode) {
+      new QRCode($("#shareQr"), { text: url, width: 168, height: 168, correctLevel: QRCode.CorrectLevel.M });
+    } else {
+      $("#shareQr").textContent = "（QRコードは通信できるときに表示されます）";
+    }
     $("#exportDlg").showModal();
   });
+
+  // ---------- ★と✓を他の端末に移す（URL の # に入れる） ----------
+  // ブースIDを36進数にして「.」でつなぐ。例: #s=4zk.1hs&d=4zk
+  const encIds = (set) => [...set].sort((a, b) => a - b).map((n) => n.toString(36)).join(".");
+  const decIds = (v) => (v || "").split(".").filter(Boolean).map((x) => parseInt(x, 36)).filter(Number.isFinite);
+  const shareUrl = () => `${location.origin}${location.pathname}#s=${encIds(stars)}&d=${encIds(done)}`;
+
+  $("#shareCopy").addEventListener("click", async () => {
+    const t = $("#shareUrl");
+    try { await navigator.clipboard.writeText(t.value); }
+    catch { t.select(); document.execCommand("copy"); }
+    $("#shareCopy").textContent = "コピーしました";
+    setTimeout(() => ($("#shareCopy").textContent = "URLをコピー"), 1500);
+  });
+
+  // 共有URLで開かれたら、取り込むかどうかを聞く（データを読み込んだあとに呼ぶ）
+  function offerImport() {
+    const h = new URLSearchParams(location.hash.slice(1));
+    if (!h.has("s") && !h.has("d")) return;
+    const known = new Set(booths.map((b) => b.id));
+    const s = decIds(h.get("s")).filter((id) => known.has(id));
+    const d = decIds(h.get("d")).filter((id) => known.has(id));
+    const clearHash = () => history.replaceState(null, "", location.pathname + location.search);
+    if (!s.length && !d.length) { clearHash(); return; }
+    $("#importMsg").textContent = `共有された ★${s.length}件・✓${d.length}件 を取り込みますか？（この端末には今 ★${stars.size}件・✓${done.size}件）`;
+    $("#importBar").hidden = false;
+    const finish = (mode) => {
+      if (mode === "replace") { stars.clear(); done.clear(); }
+      if (mode !== "cancel") {
+        s.forEach((id) => stars.add(id));
+        d.forEach((id) => done.add(id));
+        store.set("stars", [...stars]);
+        store.set("done", [...done]);
+      }
+      $("#importBar").hidden = true;
+      clearHash();
+      render();
+    };
+    $("#importReplace").onclick = () => finish("replace");
+    $("#importMerge").onclick = () => finish("merge");
+    $("#importCancel").onclick = () => finish("cancel");
+  }
 
   $("#copyBtn").addEventListener("click", async () => {
     const ta = $("#exportText");
@@ -711,6 +765,52 @@
 
   tapToJump($("#miniScroll"), mini);
   tapToJump($("#mapScroll"), big, () => $("#mapDlg").close());
+
+  // ---------- 圏外対策（sw.js） ----------
+  // 圏外のときは「保存したデータを表示中」と出す
+  const showNet = () => ($("#netState").hidden = navigator.onLine);
+  window.addEventListener("online", showNet);
+  window.addEventListener("offline", showNet);
+  showNet();
+
+  // 画像を端末に保存する（sw.js と同じ保存場所。公式サーバーの画像なので no-cors で取って保存する）
+  async function saveImages(urls, onProgress) {
+    const cache = await caches.open("gm-img-v1");
+    let n = 0, failed = 0;
+    for (const u of urls) {
+      try {
+        if (!(await cache.match(u))) await cache.put(u, await fetch(u, { mode: "no-cors" }));
+      } catch { failed++; }
+      onProgress && onProgress(++n, urls.length, failed);
+    }
+    return failed;
+  }
+
+  if ("serviceWorker" in navigator && "caches" in window) {
+    // 初めて開いたときは Service Worker が動き出す前にページを読み込み終えているので、
+    // 動き出したら必要なファイルを取り直して保存させる（次から圏外でも開ける）
+    const warm = () => {
+      const urls = [location.pathname, "data/booths.json",
+        ...[...document.querySelectorAll("script[src], link[rel=stylesheet], link[rel=manifest], link[rel=apple-touch-icon]")].map((e) => e.src || e.href)];
+      for (const u of urls) fetch(u).catch(() => {});
+    };
+    navigator.serviceWorker.register("sw.js").then(() => {
+      if (navigator.serviceWorker.controller) warm();
+      else navigator.serviceWorker.addEventListener("controllerchange", warm, { once: true });
+      // 土日の会場マップは最初から保存しておく（日曜の地図は開くまで読み込まれないため）
+      saveImages(Object.values(M.images)).catch(() => {});
+    }).catch(() => {});
+
+    $("#saveOffline").addEventListener("click", async () => {
+      const urls = [...new Set(booths.filter((b) => (b.type === "特設" || b.type === "エリア") && b.image).map((b) => b.image))];
+      $("#saveOffline").disabled = true;
+      const failed = await saveImages(urls, (n, all) => ($("#saveOfflineMsg").textContent = `保存中… ${n}/${all}`));
+      $("#saveOfflineMsg").textContent = failed ? `保存しました（${failed}件は取得できませんでした）` : "保存しました。圏外でも画像が出ます。";
+      $("#saveOffline").disabled = false;
+    });
+  } else {
+    $("#saveOffline").hidden = true;
+  }
 
   setMiniHidden(miniHidden);
   load();

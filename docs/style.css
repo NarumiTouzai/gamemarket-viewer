@@ -336,3 +336,25 @@ dialog textarea { width: 100%; font: 13px/1.5 ui-monospace, monospace; backgroun
   display: grid; place-items: center; font-size: 7px; line-height: 1; background: #f2b300; color: #fff;
 }
 @media (min-width: 1000px) { .map-legend { bottom: 10px; } }
+
+/* ---- 共有（他の端末に移す） ---- */
+.share-h { margin-top: 14px !important; padding-top: 10px; border-top: 1px solid var(--line); }
+.share { display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+.share-qr { background: #fff; padding: 6px; border-radius: 8px; line-height: 0; min-height: 40px; font-size: 12px; color: #5d6773; }
+.share-qr img, .share-qr canvas { display: block; }
+#shareUrl {
+  flex: 1 1 200px; min-width: 0; font: 12px/1.4 ui-monospace, monospace; padding: 6px 8px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink);
+}
+.import-bar {
+  position: sticky; top: var(--bar-h, 0px); z-index: 11;
+  display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center;
+  padding: 8px 16px; background: #fff4cc; color: #4a3b00; font-size: 13px; border-bottom: 1px solid #e6d58a;
+}
+.import-acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.import-acts button { border: 1px solid #c9a400; background: #f2b300; color: #1d232b; border-radius: 8px; padding: 3px 10px; font-weight: 600; }
+.import-acts button.ghost { background: transparent; font-weight: 400; }
+
+/* ---- 圏外対策 ---- */
+.net { background: #5d6773; color: #fff; border-radius: 4px; padding: 0 6px; font-size: 11px; }
+.offline { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }

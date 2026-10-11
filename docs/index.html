@@ -6,6 +6,9 @@
   <title>ゲムマ2026秋 ブース一覧</title>
   <meta name="theme-color" content="#1f3a5f">
   <link rel="stylesheet" href="style.css?v=dev">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
 </head>
 <body>
   <header class="bar">
@@ -32,6 +35,7 @@
 
     <div class="status">
       <span id="count"></span>
+      <span id="netState" class="net" hidden>圏外：保存したデータを表示中</span>
       <span class="spacer"></span>
       <div class="seg small" role="radiogroup" aria-label="表示">
         <button data-view="detail" aria-pressed="true">詳細</button>
@@ -40,6 +44,15 @@
       <button id="export" class="ghost">★リストをコピー</button>
     </div>
   </header>
+
+  <div id="importBar" class="import-bar" hidden>
+    <span id="importMsg"></span>
+    <span class="import-acts">
+      <button id="importReplace" type="button">置き換える</button>
+      <button id="importMerge" type="button">今の★に追加する</button>
+      <button id="importCancel" type="button" class="ghost">やめる</button>
+    </span>
+  </div>
 
   <div class="layout">
     <aside id="mini" class="mini">
@@ -72,6 +85,11 @@
 
   <footer class="foot">
     <p id="meta"></p>
+    <p class="offline">
+      一度開いたページ・ブース一覧・会場マップは端末に保存され、圏外でも表示できます。
+      <button id="saveOffline" class="ghost" type="button">特設・エリアの画像もまとめて保存（約17MB）</button>
+      <span id="saveOfflineMsg"></span>
+    </p>
     <p>データは<a href="https://gamemarket.jp/booth" target="_blank" rel="noopener">ゲームマーケット公式サイトのブース一覧</a>から自動取得した非公式のまとめです。最新・正確な情報は公式サイトとカタログで確認してください。★と✓はこの端末のブラウザにだけ保存されます。</p>
   </footer>
 
@@ -79,9 +97,19 @@
     <form method="dialog">
       <h2>★ 行きたいリスト</h2>
       <p class="hint">ブース番号順に並べています。メモアプリなどに貼り付けて使えます。</p>
-      <textarea id="exportText" rows="14" readonly></textarea>
+      <textarea id="exportText" rows="10" readonly></textarea>
       <div class="dlg-actions">
         <button id="copyBtn" type="button">コピー</button>
+      </div>
+
+      <h2 class="share-h">★と✓を他の端末に移す</h2>
+      <p class="hint">スマホのカメラでQRコードを読み取るか、このURLを送って開いてください。開いた端末で「置き換える／追加する」を選べます。</p>
+      <div class="share">
+        <div id="shareQr" class="share-qr" aria-label="共有用URLのQRコード"></div>
+        <input id="shareUrl" type="text" readonly aria-label="共有用URL">
+      </div>
+      <div class="dlg-actions">
+        <button id="shareCopy" type="button">URLをコピー</button>
         <button value="close">閉じる</button>
       </div>
     </form>
@@ -113,6 +141,7 @@
     <div class="map-foot">地図は<a href="https://gamemarket.jp/map" target="_blank" rel="noopener">公式のホールマップ</a>。赤枠＝選んだブース、青枠と★＝行きたいブース（一般ブースは島ごとに件数）。位置は手作業で合わせた目安です。地図の番号や島を押すと、一覧がそのブースへ移動します。</div>
   </dialog>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="mapdata.js?v=dev"></script>
   <script src="specials.js?v=dev"></script>
   <script src="areas.js?v=dev"></script>
