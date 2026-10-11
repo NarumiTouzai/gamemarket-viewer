@@ -365,3 +365,7 @@ dialog textarea { width: 100%; font: 13px/1.5 ui-monospace, monospace; backgroun
 .star-ring.cell { border-width: 2px; border-radius: 2px; background: rgba(0, 71, 255, .22); box-shadow: 0 0 0 1px #fff; }
 .star-ring.cell::after { display: none; }
 .star-ring.cell.done { background: rgba(138, 147, 158, .3); }
+
+/* ---- ゲームの人数・時間・新作 ---- */
+.games small { margin-left: 5px; font-size: 11px; color: var(--sub); }
+.games .new { margin-right: 4px; font-size: 10px; padding: 0 4px; border-radius: 3px; background: #e3001b; color: #fff; font-weight: 700; }

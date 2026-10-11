@@ -17,7 +17,7 @@
   const stars = new Set(store.get("stars", []));
   const done = new Set(store.get("done", []));
   const state = Object.assign(
-    { day: "sat", q: "", types: [], onlyStar: false, hideDone: false, onlyGames: false, view: "detail" },
+    { day: "sat", q: "", types: [], onlyStar: false, hideDone: false, onlyGames: false, view: "detail", gf: [] },
     store.get("filters", {}),
     { q: "" }
   );
@@ -86,7 +86,7 @@
           hall: (window.GM_MAP.where(b, b.day === "sun" ? 2 : 1) || {}).hall || null,
           // 公式サイトのゲーム名は [ ] で囲まれているので外す
           games: (b.games || []).map((g) => ({ ...g, title: (g.title || "").replace(/^\s*\[(.*)\]\s*$/, "$1") })),
-          hay: norm([b.name, b.number, b.type, ...(b.games || []).map((g) => g.title), description,
+          hay: norm([b.name, b.number, b.type, ...(b.games || []).flatMap((g) => [g.title, ...(g.btype || []), ...(g.theme || []), ...(g.exp || [])]), description,
             guide && [guide.kind, ...guide.tags, guide.text].join(" ")].join("\n")),
         };
       });
@@ -125,6 +125,7 @@
       if (state.onlyStar && !stars.has(b.id)) return false;
       if (state.hideDone && done.has(b.id)) return false;
       if (state.onlyGames && !b.games.length) return false;
+      if (state.gf.length && !b.games.some((g) => state.gf.every((k) => GAME_FILTERS[k](g)))) return false;
       return terms.every((t) => b.hay.includes(t));
     });
     return { list, terms };
@@ -164,11 +165,32 @@
     try { return decodeURIComponent(s); } catch { return s; }
   }
 
+  // ---------- ゲームの人数・時間などの読み取り（公式の表記: "2〜4人" "1〜人" "〜150分" "30分" など） ----------
+  const EVENT_SEASON = "2026秋"; // 発売時期がこれなら今回の新作
+  function span(s) {
+    const m = (s || "").match(/^(\d+)?\s*〜?\s*(\d+)?/);
+    if (!m || (!m[1] && !m[2])) return null;
+    const a = m[1] ? +m[1] : null, b = m[2] ? +m[2] : null;
+    const tilde = /〜/.test(s);
+    return { min: a ?? 0, max: b ?? (tilde ? Infinity : a) };
+  }
+  const isNew = (g) => g.release === EVENT_SEASON;
+  const GAME_FILTERS = {
+    new: isNew,
+    coop: (g) => (g.btype || []).includes("協力"),
+    vs: (g) => (g.btype || []).includes("対戦"),
+    p2: (g) => { const p = span(g.players); return !!p && p.min <= 2 && p.max >= 2; },
+    p5: (g) => { const p = span(g.players); return !!p && p.max >= 5; },
+    t30: (g) => { const t = span(g.time); return !!t && t.max <= 30; },
+  };
+  // ゲーム名の横に出す短い説明（例: 2〜4人・30分・協力）
+  const gameMeta = (g) => [g.players, g.time, ...(g.btype || [])].filter(Boolean).join("・");
+
   function card(b, terms) {
     const s = stars.has(b.id), d = done.has(b.id);
     const games = b.games.length
       ? `<ul class="games">${b.games.map((g) =>
-          `<li><a href="${esc(g.url)}" target="_blank" rel="noopener">${highlight(g.title || `ゲーム #${g.id}`, terms)}</a></li>`).join("")}</ul>`
+          `<li><a href="${esc(g.url)}" target="_blank" rel="noopener"${g.price ? ` title="${esc(g.price)}${g.age ? " / " + esc(g.age) : ""}"` : ""}>${isNew(g) ? '<b class="new">新作</b>' : ""}${highlight(g.title || `ゲーム #${g.id}`, terms)}${gameMeta(g) ? `<small>${esc(gameMeta(g))}</small>` : ""}</a></li>`).join("")}</ul>`
       : "";
     const descHit = terms.length && terms.some((t) => norm(b.description).includes(t));
     const desc = b.description
@@ -264,6 +286,17 @@
       saveFilters(); render();
     });
   }
+
+  // ゲームの条件（複数選ぶと、そのすべてを満たすゲームがあるブースだけ）
+  document.querySelectorAll("[data-gf]").forEach((btn) => {
+    btn.setAttribute("aria-pressed", String(state.gf.includes(btn.dataset.gf)));
+    btn.addEventListener("click", () => {
+      const k = btn.dataset.gf;
+      state.gf = state.gf.includes(k) ? state.gf.filter((x) => x !== k) : [...state.gf, k];
+      btn.setAttribute("aria-pressed", String(state.gf.includes(k)));
+      saveFilters(); render();
+    });
+  });
 
   $("#types").addEventListener("click", (e) => {
     const btn = e.target.closest("[data-type]");
