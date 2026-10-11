@@ -403,7 +403,7 @@
       sc.scrollTop = fy * v.width - py;
     };
 
-    // ★を付けたブースを地図に重ねる。エリア・特設はその場所に★の印、一般ブースは島を黄色で囲んで件数を出す。
+    // ★を付けたブースを地図に重ねる。エリア・特設はその区画を黄色い枠で囲み（右上に★）、一般ブースは島を囲んで下に件数を出す。
     // ✓（行った）にしたものは灰色。位置は地図に対する割合で置くので、拡大・縮小しても付いてくる
     v.drawStars = () => {
       let layer = el("Stage").querySelector(".star-layer");
@@ -421,8 +421,9 @@
           islands.set(loc.island, e);
           continue;
         }
-        const [cx, cy] = loc.pt || [(loc.box[0] + loc.box[2]) / 2, (loc.box[1] + loc.box[3]) / 2];
-        html += `<i class="star-pin${done.has(b.id) ? " done" : ""}" style="left:${pct(cx, M.W)};top:${pct(cy, M.H)}">★</i>`;
+        // 番号が隠れないよう、中は透明のまま枠で囲み、★は右上の角に小さく付ける
+        const [x1, y1, x2, y2] = loc.pt ? [loc.pt[0] - 18, loc.pt[1] - 18, loc.pt[0] + 18, loc.pt[1] + 18] : loc.box;
+        html += `<i class="star-ring${done.has(b.id) ? " done" : ""}" style="left:${pct(x1 - 2, M.W)};top:${pct(y1 - 2, M.H)};width:${pct(x2 - x1 + 4, M.W)};height:${pct(y2 - y1 + 4, M.H)}"></i>`;
       }
       for (const [, e] of islands) {
         const [x1, y1, x2, y2] = e.box;

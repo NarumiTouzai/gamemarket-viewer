@@ -296,16 +296,20 @@ dialog textarea { width: 100%; font: 13px/1.5 ui-monospace, monospace; backgroun
 /* ---- 地図に重ねる★（行きたいブース） ---- */
 .star-layer { position: absolute; inset: 0; pointer-events: none; }
 .star-layer i { position: absolute; font-style: normal; }
-.star-pin {
-  width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%;
-  display: grid; place-items: center; font-size: 12px; line-height: 1;
-  background: #f2b300; color: #fff; box-shadow: 0 0 0 2px #fff, 0 1px 3px rgba(0,0,0,.45);
+/* エリア・特設: 区画を枠で囲むだけ（中の番号は見えるまま）。★は右上の角 */
+.star-ring { border: 2px solid #f2b300; border-radius: 4px; box-shadow: 0 0 0 1px #fff; }
+.star-ring::after {
+  content: "★"; position: absolute; top: -8px; right: -8px;
+  width: 14px; height: 14px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 9px; line-height: 1; background: #f2b300; color: #fff; box-shadow: 0 0 0 1.5px #fff;
 }
-.star-box { border: 2px solid #f2b300; border-radius: 4px; background: rgba(242, 179, 0, .18); }
+.star-ring.done { border-color: #9aa4af; }
+.star-ring.done::after { background: #9aa4af; }
+.star-box { border: 2px solid #f2b300; border-radius: 4px; background: rgba(242, 179, 0, .12); }
 .star-box b {
-  position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
+  position: absolute; top: calc(100% + 3px); left: 50%; transform: translateX(-50%); /* 島の文字（A,H など）は上にあるので下に出す */
   font-size: 11px; line-height: 16px; padding: 0 5px; border-radius: 8px; white-space: nowrap;
   background: #f2b300; color: #fff; box-shadow: 0 0 0 2px #fff;
 }
-.star-pin.done, .star-box.done b { background: #9aa4af; }
+.star-box.done b { background: #9aa4af; }
 .star-box.done { border-color: #9aa4af; background: rgba(154, 164, 175, .15); }
