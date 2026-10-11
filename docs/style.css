@@ -297,18 +297,19 @@ dialog textarea { width: 100%; font: 13px/1.5 ui-monospace, monospace; backgroun
 .star-layer { position: absolute; inset: 0; pointer-events: none; }
 .star-layer i { position: absolute; font-style: normal; }
 /* エリア・特設: 区画を太い枠で囲むだけ（中の番号は見えるまま） */
-.star-ring { border: 3px solid #f2b300; border-radius: 5px; box-shadow: 0 0 0 1.5px #fff, 0 0 6px rgba(242, 179, 0, .8); }
-.star-ring.done { border-color: #9aa4af; box-shadow: 0 0 0 1.5px #fff; }
+/* 地図は黄色（ボードゲーム）の区画が多いので、地図に使われていない濃い青＋白の縁取りの二重枠にする */
+.star-ring { border: 3px solid #0047ff; border-radius: 5px; box-shadow: inset 0 0 0 1.5px #fff, 0 0 0 1.5px #fff; }
+.star-ring.done { border-color: #8a939e; }
 /* 「★だけ」: ★以外を暗くする */
 .star-layer .spot { position: absolute; inset: 0; width: 100%; height: 100%; }
 .star-layer { z-index: 1; }
 .map-mark { z-index: 2; }
 .ghost[aria-pressed="true"] { background: #f2b300; border-color: #f2b300; color: #1d232b; font-weight: 700; }
-.star-box { border: 3px solid #f2b300; border-radius: 5px; box-shadow: 0 0 0 1.5px #fff; }
+.star-box { border: 3px solid #0047ff; border-radius: 5px; box-shadow: inset 0 0 0 1.5px #fff, 0 0 0 1.5px #fff; background: rgba(0, 71, 255, .10); }
 .star-box b {
   position: absolute; top: calc(100% + 3px); left: 50%; transform: translateX(-50%); /* 島の文字（A,H など）は上にあるので下に出す */
   font-size: 11px; line-height: 16px; padding: 0 5px; border-radius: 8px; white-space: nowrap;
-  background: #f2b300; color: #fff; box-shadow: 0 0 0 2px #fff;
+  background: #0047ff; color: #fff; box-shadow: 0 0 0 2px #fff;
 }
 .star-box.done b { background: #9aa4af; }
 .star-box.done { border-color: #9aa4af; background: rgba(154, 164, 175, .15); }
