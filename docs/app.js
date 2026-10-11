@@ -270,6 +270,8 @@
     const curCard = current && document.querySelector(`.card[data-id="${current.id}"]`);
     if (curCard) curCard.classList.add("cur");
     else if (current) showMini(null, false);
+    // 参加日を切り替えたら、横の地図もその日のものにする（選んでいるブースはそのまま）
+    if (mini.width && mapDayFor(curCard ? current : null) !== mini.day) showMini(curCard ? current : null, false);
     mini.drawStars();
   }
 
