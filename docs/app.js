@@ -333,6 +333,9 @@
   // ---------- 会場マップ ----------
   const M = window.GM_MAP;
 
+  // 地図上の範囲 [x1,y1,x2,y2]。エリアは区画の外形、外形が分からない点は中心から r の正方形、それ以外は記録した範囲
+  const locRect = (loc, r) => loc.areaBox || (loc.pt ? [loc.pt[0] - r, loc.pt[1] - r, loc.pt[0] + r, loc.pt[1] + r] : loc.box);
+
   // 土曜のみ→土の地図、日曜のみ→日の地図、両日→いま選んでいる参加日
   const mapDayFor = (b) => (b && b.day === "sun" ? 2 : b && b.day === "sat" ? 1 : state.day === "sun" ? 2 : 1);
   const boothNo = (b) => b.number.replace(/^.*?([0-9]+)$/, "$1").replace(/^0+/, "");
@@ -368,12 +371,12 @@
       if (!loc) return null;
 
       const pad = 6;
-      const [x1, y1, x2, y2] = loc.pt ? [loc.pt[0] - 20, loc.pt[1] - 20, loc.pt[0] + 20, loc.pt[1] + 20] : loc.box;
+      const [x1, y1, x2, y2] = locRect(loc, 20);
       Object.assign(mark.style, {
         left: `${((x1 - pad) / M.W) * 100}%`, top: `${((y1 - pad) / M.H) * 100}%`,
         width: `${((x2 - x1 + pad * 2) / M.W) * 100}%`, height: `${((y2 - y1 + pad * 2) / M.H) * 100}%`,
       });
-      mark.classList.toggle("round", !!loc.pt);
+      mark.classList.toggle("round", !!loc.pt && !loc.areaBox);
       if (recenter) v.centerOn((x1 + x2) / 2 / M.W, (y1 + y2) / 2 / M.H, smooth);
       return [x2 - x1 + pad * 2, y2 - y1 + pad * 2];
     };
@@ -425,9 +428,9 @@
           islands.set(loc.island, e);
           continue;
         }
-        // エリアの小さな区画は約28間隔で並ぶ（17と18など）ので、枠は1区画に収まる幅（26）にして隣と重ならないようにする
-        const [x1, y1, x2, y2] = loc.pt ? [loc.pt[0] - 13, loc.pt[1] - 13, loc.pt[0] + 13, loc.pt[1] + 13] : loc.box;
-        const pad = loc.pt ? 0 : 3;
+        // エリアは区画の外形（mapdata.js の areaBox）に沿って囲む
+        const [x1, y1, x2, y2] = locRect(loc, 13);
+        const pad = loc.pt ? 0 : 3; // エリアは区画の内側に枠を描く（隣の区画と重ならない）
         rects.push([x1 - pad, y1 - pad, x2 + pad, y2 + pad]);
         html += `<i class="star-ring${done.has(b.id) ? " done" : ""}" style="left:${pct(x1 - pad, M.W)};top:${pct(y1 - pad, M.H)};width:${pct(x2 - x1 + pad * 2, M.W)};height:${pct(y2 - y1 + pad * 2, M.H)}"></i>`;
       }
@@ -499,7 +502,7 @@
     const loc = b && M.locate(b, day);
     let size = null;
     if (loc) {
-      const [x1, y1, x2, y2] = loc.pt ? [loc.pt[0] - 20, loc.pt[1] - 20, loc.pt[0] + 20, loc.pt[1] + 20] : loc.box;
+      const [x1, y1, x2, y2] = locRect(loc, 20);
       size = [x2 - x1 + 12, y2 - y1 + 12];
     }
     const width = miniWidthFor(size);
@@ -579,7 +582,7 @@
       if (!shown.has(b.id)) continue;
       const loc = M.locate(b, day);
       if (!loc) continue;
-      const [x1, y1, x2, y2] = loc.pt ? [loc.pt[0] - 22, loc.pt[1] - 22, loc.pt[0] + 22, loc.pt[1] + 22] : loc.box;
+      const [x1, y1, x2, y2] = locRect(loc, 22);
       if (x < x1 - 4 || x > x2 + 4 || y < y1 - 4 || y > y2 + 4) continue;
       if (loc.island) { island = island || b; continue; } // 一覧の順で最初のもの＝島の先頭
       const area = (x2 - x1) * (y2 - y1);                  // 重なっていたら小さい区画を優先
