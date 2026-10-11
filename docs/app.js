@@ -449,14 +449,14 @@
         note = M.locate(b, 3 - day)
           ? `この日の地図にはありません（${day === 1 ? "日曜" : "土曜"}の地図にあります）`
           : "地図上の位置が分かりませんでした。公式の地図で確認してください。";
-      } else if (loc && loc.island) {
+      } else if (loc && loc.island && !loc.cell) {
         note = `${loc.island} の島（赤枠）の中の番号 ${boothNo(b)}`;
       }
       el("Note").textContent = note;
       el("Note").hidden = !note;
       if (!loc) return null;
 
-      const pad = 6;
+      const pad = loc.cell ? 1 : 6; // コマは小さく、すぐ横に番号があるので、枠はコマにぴったり付ける
       const [x1, y1, x2, y2] = locRect(loc, 20);
       Object.assign(mark.style, {
         left: `${((x1 - pad) / M.W) * 100}%`, top: `${((y1 - pad) / M.H) * 100}%`,
@@ -508,7 +508,7 @@
         if (!stars.has(b.id)) continue;
         const loc = M.locate(b, v.day);
         if (!loc) continue;
-        if (loc.island) {
+        if (loc.island && !loc.cell) {
           const e = islands.get(loc.island) || { box: loc.box, n: 0, left: 0 };
           e.n++; if (!done.has(b.id)) e.left++;
           islands.set(loc.island, e);
@@ -516,9 +516,9 @@
         }
         // エリアは区画の外形（mapdata.js の areaBox）に沿って囲む
         const [x1, y1, x2, y2] = locRect(loc, 13);
-        const pad = loc.pt ? 0 : 3; // エリアは区画の内側に枠を描く（隣の区画と重ならない）
+        const pad = loc.pt || loc.cell ? 0 : 3; // エリアは区画の内側に枠を描く（隣の区画と重ならない）
         rects.push([x1 - pad, y1 - pad, x2 + pad, y2 + pad]);
-        html += `<i class="star-ring${done.has(b.id) ? " done" : ""}" style="left:${pct(x1 - pad, M.W)};top:${pct(y1 - pad, M.H)};width:${pct(x2 - x1 + pad * 2, M.W)};height:${pct(y2 - y1 + pad * 2, M.H)}"></i>`;
+        html += `<i class="star-ring${loc.cell ? " cell" : ""}${done.has(b.id) ? " done" : ""}" style="left:${pct(x1 - pad, M.W)};top:${pct(y1 - pad, M.H)};width:${pct(x2 - x1 + pad * 2, M.W)};height:${pct(y2 - y1 + pad * 2, M.H)}"></i>`;
       }
       for (const [, e] of islands) {
         const [x1, y1, x2, y2] = e.box;
@@ -575,7 +575,9 @@
     if (!size) return Math.floor(Math.min(w, (h * M.W) / M.H));
     // 赤枠が枠に収まる範囲で大きく。エリアの小さな区画でも拡大しすぎない
     const fit = Math.min((0.8 * w * M.W) / size[0], (0.8 * h * M.W) / size[1]);
-    return Math.round(Math.max(w, Math.min(fit, 1700, w * 5)));
+    // 一般ブースのコマのような小さな範囲は、番号が読めるところまで大きく拡大する
+    const cap = Math.min(size[0], size[1]) < 20 ? 3600 : 1700;
+    return Math.round(Math.max(w, Math.min(fit, cap, w * 8)));
   }
 
   function showMini(b, smooth) {
@@ -670,7 +672,7 @@
       if (!loc) continue;
       const [x1, y1, x2, y2] = locRect(loc, 22);
       if (x < x1 - 4 || x > x2 + 4 || y < y1 - 4 || y > y2 + 4) continue;
-      if (loc.island) { island = island || b; continue; } // 一覧の順で最初のもの＝島の先頭
+      if (loc.island && !loc.cell) { island = island || b; continue; } // コマの位置が分からない島は、一覧の順で最初のもの＝島の先頭
       const area = (x2 - x1) * (y2 - y1);                  // 重なっていたら小さい区画を優先
       if (area < bestArea) { best = b; bestArea = area; }
     }
