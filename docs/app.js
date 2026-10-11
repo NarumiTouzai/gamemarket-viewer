@@ -260,7 +260,10 @@
     $("#count").textContent = `${list.length} / ${booths.length} ブース　★${stars.size}　✓${done.size}`;
     // ゲームの条件が付いているときは、件数の横に出す（スマホでは条件のボタンが横に隠れて見えないため）
     const GF_LABEL = { new: "新作あり", coop: "協力", vs: "対戦" };
-    const cond = [...state.gf.map((k) => GF_LABEL[k]), state.players && (state.players === "6" ? "6人以上" : state.players + "人"), state.maxTime && state.maxTime + "分以内"].filter(Boolean);
+    const cond = [...state.types, state.onlyStar && "★だけ", state.hideDone && "✓を隠す", state.onlyGames && "ゲーム登録あり",
+      ...state.gf.map((k) => GF_LABEL[k]), state.players && (state.players === "6" ? "6人以上" : state.players + "人"), state.maxTime && state.maxTime + "分以内"].filter(Boolean);
+    $("#filterCount").hidden = !cond.length;
+    $("#filterCount").textContent = cond.length;
     $("#activeFilters").hidden = !cond.length;
     $("#activeFilters").textContent = `条件: ${cond.join("・")} ✕`;
     // 地図に出しているブースが絞り込みで消えたら、地図は全体表示に戻す
@@ -311,12 +314,41 @@
   });
 
   // 条件の表示を押したら、ゲームの条件をすべて外す
-  $("#activeFilters").addEventListener("click", () => {
+  function clearFilters() {
     state.gf = []; state.players = ""; state.maxTime = "";
-    document.querySelectorAll("[data-gf]").forEach((x) => x.setAttribute("aria-pressed", "false"));
+    state.types = []; state.onlyStar = false; state.hideDone = false; state.onlyGames = false;
+    document.querySelectorAll("[data-gf], [data-type], #onlyStar, #hideDone, #onlyGames").forEach((x) => x.setAttribute("aria-pressed", "false"));
     for (const id of ["#gfPlayers", "#gfTime"]) { $(id).value = ""; $(id).closest(".chip").setAttribute("aria-pressed", "false"); }
     saveFilters(); render();
+  }
+  $("#activeFilters").addEventListener("click", clearFilters);
+  $("#clearFilters").addEventListener("click", clearFilters);
+
+  // 「絞り込み」パネルの開け閉め。パネルの外を押しても閉じる
+  function setPanel(open) {
+    $("#filterPanel").hidden = !open;
+    $("#openFilters").setAttribute("aria-expanded", String(open));
+    if (open) document.body.classList.remove("bar-hidden");
+  }
+  $("#openFilters").addEventListener("click", (e) => { e.stopPropagation(); setPanel($("#filterPanel").hidden); });
+  $("#closeFilters").addEventListener("click", () => setPanel(false));
+  document.addEventListener("click", (e) => {
+    if (!$("#filterPanel").hidden && !e.target.closest("#filterPanel, #openFilters")) setPanel(false);
   });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") setPanel(false); });
+
+  // スマホ（狭い画面）では、一覧を下へ読み進めているあいだヘッダーを隠し、少し上へ戻すとまた出す
+  {
+    let lastY = scrollY;
+    window.addEventListener("scroll", () => {
+      const y = scrollY, dy = y - lastY;
+      if (Math.abs(dy) < 8) return;
+      const narrow = !matchMedia("(min-width: 1000px)").matches;
+      const hide = narrow && dy > 0 && y > $(".bar").offsetHeight && $("#filterPanel").hidden;
+      document.body.classList.toggle("bar-hidden", hide);
+      lastY = y;
+    }, { passive: true });
+  }
 
   // 人数・時間の選択
   for (const [id, key] of [["#gfPlayers", "players"], ["#gfTime", "maxTime"]]) {
@@ -752,7 +784,7 @@
     if (!c) return;
     if (state.view === "list") { opened.add(b.id); c.classList.add("open"); }
     const wide = matchMedia("(min-width: 1000px)").matches;
-    const cover = $(".bar").offsetHeight + (wide ? 0 : $("#mini").offsetHeight);
+    const cover = Math.max(0, $(".bar").getBoundingClientRect().bottom) + (wide ? 0 : $("#mini").offsetHeight);
     window.scrollTo({ top: c.getBoundingClientRect().top + window.scrollY - cover - 8 });
     showMini(b, true);
   }

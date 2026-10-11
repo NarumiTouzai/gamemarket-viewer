@@ -387,3 +387,28 @@ dialog textarea { width: 100%; font: 13px/1.5 ui-monospace, monospace; backgroun
 /* 件数の行は狭い画面では折り返す（ボタンの文字が途中で切れないように） */
 .status { flex-wrap: wrap; row-gap: 4px; }
 .status button, .status .seg button { white-space: nowrap; }
+
+/* ---- 絞り込みパネル ---- */
+.filters { overflow: visible; flex-wrap: wrap; }
+.filter-btn b { margin-left: 4px; padding: 0 6px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 11px; }
+.filter-btn[aria-expanded="true"] { border-color: var(--accent); }
+.filter-panel {
+  position: absolute; left: 0; right: 0; top: 100%; z-index: 20;
+  max-height: min(70vh, 560px); overflow: auto; padding: 10px 16px 12px;
+  background: var(--card); border-bottom: 1px solid var(--line); box-shadow: 0 8px 20px rgba(0,0,0,.18);
+}
+.filter-panel section + section { margin-top: 10px; }
+.filter-panel h3 { margin: 0 0 6px; font-size: 13px; color: var(--sub); font-weight: 600; }
+.filter-panel h3 small { font-weight: 400; }
+.filter-panel .chips { flex-wrap: wrap; }
+.panel-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.panel-actions button { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 5px 14px; }
+.panel-actions button:last-child { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+/* ---- スマホ: 下へスクロール中はヘッダーを隠す ---- */
+.bar { transition: transform .2s ease; }
+.mini, .import-bar { transition: top .2s ease; }
+@media (max-width: 999px) {
+  body.bar-hidden .bar { transform: translateY(-100%); }
+  body.bar-hidden .mini, body.bar-hidden .import-bar { top: 0; }
+}

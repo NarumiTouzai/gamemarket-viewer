@@ -37,34 +37,52 @@
         <button data-day="sun" aria-pressed="false">日曜 10/18</button>
         <button data-day="all" aria-pressed="false">全部</button>
       </div>
-      <div class="chips" id="types" aria-label="ブースタイプ"></div>
-      <div class="chips">
-        <button id="onlyStar" class="chip" aria-pressed="false">★ 行きたいだけ</button>
-        <button id="hideDone" class="chip" aria-pressed="false">✓ 行った を隠す</button>
-        <button id="onlyGames" class="chip" aria-pressed="false">ゲーム登録ありだけ</button>
-      </div>
-      <div class="chips" id="gameFilters" aria-label="ゲームの条件（どれか1つのゲームがすべて満たせば表示）">
-        <button class="chip" data-gf="new" aria-pressed="false">🆕 新作あり</button>
-        <button class="chip" data-gf="coop" aria-pressed="false">協力</button>
-        <button class="chip" data-gf="vs" aria-pressed="false">対戦</button>
-        <label class="chip sel"><span>人数</span>
-          <select id="gfPlayers" aria-label="遊ぶ人数">
-            <option value="">指定なし</option>
-            <option value="1">1人</option><option value="2">2人</option><option value="3">3人</option>
-            <option value="4">4人</option><option value="5">5人</option><option value="6">6人以上</option>
-          </select></label>
-        <label class="chip sel"><span>時間</span>
-          <select id="gfTime" aria-label="遊ぶ時間">
-            <option value="">指定なし</option>
-            <option value="15">15分以内</option><option value="30">30分以内</option>
-            <option value="60">60分以内</option><option value="90">90分以内</option>
-          </select></label>
+      <button id="openFilters" class="chip filter-btn" type="button" aria-expanded="false" aria-controls="filterPanel">絞り込み<b id="filterCount" hidden></b> ▾</button>
+    </div>
+
+    <!-- 絞り込みの条件（「絞り込み」を押すと開く） -->
+    <div id="filterPanel" class="filter-panel" hidden>
+      <section>
+        <h3>ブースの種類</h3>
+          <div class="chips" id="types" aria-label="ブースタイプ"></div>
+      </section>
+      <section>
+        <h3>★・✓</h3>
+          <div class="chips">
+            <button id="onlyStar" class="chip" aria-pressed="false">★ 行きたいだけ</button>
+            <button id="hideDone" class="chip" aria-pressed="false">✓ 行った を隠す</button>
+            <button id="onlyGames" class="chip" aria-pressed="false">ゲーム登録ありだけ</button>
+          </div>
+      </section>
+      <section>
+        <h3>ゲームの条件 <small>（選んだ条件をすべて満たすゲームがあるブース）</small></h3>
+          <div class="chips" id="gameFilters" aria-label="ゲームの条件（どれか1つのゲームがすべて満たせば表示）">
+            <button class="chip" data-gf="new" aria-pressed="false">🆕 新作あり</button>
+            <button class="chip" data-gf="coop" aria-pressed="false">協力</button>
+            <button class="chip" data-gf="vs" aria-pressed="false">対戦</button>
+            <label class="chip sel"><span>人数</span>
+              <select id="gfPlayers" aria-label="遊ぶ人数">
+                <option value="">指定なし</option>
+                <option value="1">1人</option><option value="2">2人</option><option value="3">3人</option>
+                <option value="4">4人</option><option value="5">5人</option><option value="6">6人以上</option>
+              </select></label>
+            <label class="chip sel"><span>時間</span>
+              <select id="gfTime" aria-label="遊ぶ時間">
+                <option value="">指定なし</option>
+                <option value="15">15分以内</option><option value="30">30分以内</option>
+                <option value="60">60分以内</option><option value="90">90分以内</option>
+              </select></label>
+          </div>
+      </section>
+      <div class="panel-actions">
+        <button id="clearFilters" type="button" class="ghost">条件をすべて外す</button>
+        <button id="closeFilters" type="button">閉じる</button>
       </div>
     </div>
 
     <div class="status">
       <span id="count"></span>
-      <button id="activeFilters" class="active-f" type="button" hidden title="ゲームの条件をすべて外す"></button>
+      <button id="activeFilters" class="active-f" type="button" hidden title="絞り込みの条件をすべて外す"></button>
       <span id="netState" class="net" hidden>圏外：保存したデータを表示中</span>
       <span class="spacer"></span>
       <div class="seg small" role="radiogroup" aria-label="表示">
