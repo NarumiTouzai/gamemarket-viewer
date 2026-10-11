@@ -228,6 +228,7 @@
     const curCard = current && document.querySelector(`.card[data-id="${current.id}"]`);
     if (curCard) curCard.classList.add("cur");
     else if (current) showMini(null, false);
+    mini.drawStars();
   }
 
   function saveFilters() {
@@ -302,6 +303,9 @@
     if (current === b) tmp.firstElementChild.classList.add("cur");
     btn.closest(".card").replaceWith(tmp.firstElementChild);
     $("#count").textContent = $("#count").textContent.replace(/★\d+　✓\d+/, `★${stars.size}　✓${done.size}`);
+    // 地図の★も付け直す
+    mini.drawStars();
+    if ($("#mapDlg").open) big.drawStars();
   });
 
   $("#export").addEventListener("click", () => {
@@ -343,6 +347,7 @@
       const img = el("Img");
       if (img.getAttribute("src") !== M.images[day]) img.src = M.images[day];
       el("Stage").style.width = `${width}px`;
+      v.drawStars();
 
       const loc = b && M.locate(b, day);
       const mark = el("Mark");
@@ -398,6 +403,34 @@
       sc.scrollTop = fy * v.width - py;
     };
 
+    // ★を付けたブースを地図に重ねる。エリア・特設はその場所に★の印、一般ブースは島を黄色で囲んで件数を出す。
+    // ✓（行った）にしたものは灰色。位置は地図に対する割合で置くので、拡大・縮小しても付いてくる
+    v.drawStars = () => {
+      let layer = el("Stage").querySelector(".star-layer");
+      if (!layer) { layer = document.createElement("div"); layer.className = "star-layer"; el("Stage").append(layer); }
+      const pct = (x, w) => `${(x / w) * 100}%`;
+      const islands = new Map();
+      let html = "";
+      for (const b of booths) {
+        if (!stars.has(b.id)) continue;
+        const loc = M.locate(b, v.day);
+        if (!loc) continue;
+        if (loc.island) {
+          const e = islands.get(loc.island) || { box: loc.box, n: 0, left: 0 };
+          e.n++; if (!done.has(b.id)) e.left++;
+          islands.set(loc.island, e);
+          continue;
+        }
+        const [cx, cy] = loc.pt || [(loc.box[0] + loc.box[2]) / 2, (loc.box[1] + loc.box[3]) / 2];
+        html += `<i class="star-pin${done.has(b.id) ? " done" : ""}" style="left:${pct(cx, M.W)};top:${pct(cy, M.H)}">★</i>`;
+      }
+      for (const [, e] of islands) {
+        const [x1, y1, x2, y2] = e.box;
+        html += `<i class="star-box${e.left ? "" : " done"}" style="left:${pct(x1 - 4, M.W)};top:${pct(y1 - 4, M.H)};width:${pct(x2 - x1 + 8, M.W)};height:${pct(y2 - y1 + 8, M.H)}"><b>★${e.n}</b></i>`;
+      }
+      layer.innerHTML = html;
+    };
+
     pinchZoom(el("Scroll"), v);
     return v;
   }
@@ -445,7 +478,7 @@
     current = b;
     document.querySelectorAll(".card.cur").forEach((c) => c.classList.remove("cur"));
     if (b) document.querySelector(`.card[data-id="${b.id}"]`)?.classList.add("cur");
-    $("#miniTitle").textContent = b ? `${b.number}　${b.name}` : "会場マップ（一覧のブースを押すと場所が出ます）";
+    $("#miniTitle").textContent = b ? `${b.number}　${b.name}` : "会場マップ（ブースを押すと赤枠、★は行きたいブース）";
     if (miniHidden) return;
     const day = mapDayFor(b);
     const loc = b && M.locate(b, day);
