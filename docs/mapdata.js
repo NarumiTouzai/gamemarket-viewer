@@ -110,5 +110,16 @@ window.GM_MAP = (() => {
     return null;
   }
 
-  return { W, H, images, locate };
+  // ホール（1〜5）。公式マップの「展示ホール1〜5」の見出しと壁の位置、特設ブースの公式の開催場所の表記（17件すべて一致）から決めた x の境目
+  const hallOfX = (x) => (x < 340 ? 5 : x < 770 ? 4 : x < 1205 ? 3 : x < 1560 ? 2 : 1);
+  // ブースの地図上の中心とホール。見つからなければ null
+  function where(b, day) {
+    const loc = locate(b, day);
+    if (!loc) return null;
+    const r = loc.areaBox || loc.box || [loc.pt[0], loc.pt[1], loc.pt[0], loc.pt[1]];
+    const x = (r[0] + r[2]) / 2, y = (r[1] + r[3]) / 2;
+    return { x, y, hall: hallOfX(x), island: loc.island || null };
+  }
+
+  return { W, H, images, locate, where };
 })();

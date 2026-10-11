@@ -83,6 +83,7 @@
           group: groupKey(b),
           description,
           guide, // 特設ブースの「どんな場所か」（specials.js）
+          hall: (window.GM_MAP.where(b, b.day === "sun" ? 2 : 1) || {}).hall || null,
           // 公式サイトのゲーム名は [ ] で囲まれているので外す
           games: (b.games || []).map((g) => ({ ...g, title: (g.title || "").replace(/^\s*\[(.*)\]\s*$/, "$1") })),
           hay: norm([b.name, b.number, b.type, ...(b.games || []).map((g) => g.title), description,
@@ -204,6 +205,7 @@
       <div class="tags">
         <span class="tag ${b.day}">${dayLabel[b.day] || b.day}</span>
         ${b.type ? `<span class="tag type">${esc(b.type)}</span>` : ""}
+        ${b.hall ? `<span class="tag type">ホール${b.hall}</span>` : ""}
         ${b.games.length ? `<span class="tag type">ゲーム ${b.games.length}</span>` : ""}
       </div>
       <div class="body">${guide}${thumb}${games}${desc}${links}</div>
@@ -311,17 +313,47 @@
     if ($("#mapDlg").open) big.drawStars();
   });
 
+  // ★リストの文章。order が "walk" ならホールごと・回る順、"number" ならブース番号順
+  function exportText(order) {
+    const line = (b) => {
+      const day = state.day !== "all" && b.day !== "both" ? `［${dayLabel[b.day]}］` : "";
+      const g = b.games.map((x) => x.title).filter(Boolean).join(" / ");
+      return `${done.has(b.id) ? "✓" : "□"} ${b.number || "—"}　${b.name}${day}${g ? `\n    ${g}` : ""}`;
+    };
+    const list = booths.filter((b) => stars.has(b.id));
+    if (!list.length) return "☆ を押して行きたいブースを選んでください。";
+    const head = `ゲムマ2026秋 行きたいブース（${list.length}件）`;
+    if (order === "number") return `${head}\n\n${list.map(line).join("\n")}`;
+    // 回る順: ホール1→5。ホールの中は、地図の左から列ごとに上→下、下→上と折り返して進む
+    const day = state.day === "sun" ? 2 : 1;
+    const placed = list.map((b) => ({ b, w: M.where(b, b.day === "sun" ? 2 : b.day === "sat" ? 1 : day) }));
+    const key = ({ b, w }) => {
+      if (!w) return [9, 0, 0, b.order];
+      const col = Math.round(w.x / 50);
+      return [w.hall, col, col % 2 ? -w.y : w.y, col % 2 ? -b.order : b.order];
+    };
+    placed.sort((p, q) => { const a = key(p), c = key(q); for (let i = 0; i < a.length; i++) if (a[i] !== c[i]) return a[i] - c[i]; return 0; });
+    let out = head, cur = null;
+    for (const p of placed) {
+      const h = p.w ? `■ ホール${p.w.hall}` : "■ 場所不明";
+      if (h !== cur) {
+        const n = placed.filter((q) => (q.w ? `■ ホール${q.w.hall}` : "■ 場所不明") === h).length;
+        out += `\n\n${h}（${n}件）`; cur = h;
+      }
+      out += `\n${line(p.b)}`;
+    }
+    return out;
+  }
+
+  document.querySelectorAll("[name=exportOrder]").forEach((r) => r.addEventListener("change", () => {
+    $("#exportText").value = exportText(r.value);
+    store.set("exportOrder", r.value);
+  }));
+
   $("#export").addEventListener("click", () => {
-    const rows = booths
-      .filter((b) => stars.has(b.id))
-      .map((b) => {
-        const day = state.day !== "all" && b.day !== "both" ? `［${dayLabel[b.day]}］` : "";
-        const g = b.games.map((x) => x.title).filter(Boolean).join(" / ");
-        return `${done.has(b.id) ? "✓" : "□"} ${b.number || "—"}　${b.name}${day}${g ? `\n    ${g}` : ""}`;
-      });
-    $("#exportText").value = rows.length
-      ? `ゲムマ2026秋 行きたいブース（${rows.length}件）\n\n${rows.join("\n")}`
-      : "☆ を押して行きたいブースを選んでください。";
+    const order = store.get("exportOrder", "walk");
+    document.querySelectorAll("[name=exportOrder]").forEach((r) => (r.checked = r.value === order));
+    $("#exportText").value = exportText(order);
     // 他の端末に移す用の URL と QR コード
     const url = shareUrl();
     $("#shareUrl").value = url;

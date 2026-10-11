@@ -96,7 +96,11 @@
   <dialog id="exportDlg">
     <form method="dialog">
       <h2>★ 行きたいリスト</h2>
-      <p class="hint">ブース番号順に並べています。メモアプリなどに貼り付けて使えます。</p>
+      <p class="hint">メモアプリなどに貼り付けて使えます。</p>
+      <div class="order" role="radiogroup" aria-label="並べ方">
+        <label><input type="radio" name="exportOrder" value="walk" checked> 回る順（ホールごと）</label>
+        <label><input type="radio" name="exportOrder" value="number"> ブース番号順</label>
+      </div>
       <textarea id="exportText" rows="10" readonly></textarea>
       <div class="dlg-actions">
         <button id="copyBtn" type="button">コピー</button>

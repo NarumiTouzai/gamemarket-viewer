@@ -7,6 +7,7 @@
 // --stale-days : 前回の取得からこの日数以上たったブースの詳細を取り直す（既定 2）
 // --max-refetch: 1回で取り直す古いブースの上限（既定 700。古い順。新規ブースはこれと別に必ず取る）
 // --no-details : 一覧だけ取得する（ブース名・番号・出展日のみ。数分で終わる）
+// --max-games  : 1回で取りに行くゲーム詳細（人数・時間・価格など）の上限（既定 800）。取得済みのゲームは取り直さない
 //
 // 公式サイトへの負荷を避けるため、リクエストは 1 本ずつ、間隔(--delay ms)を空けて送ります。
 
@@ -139,6 +140,38 @@ else
         { var b = booths[id]; b.Games = p.Games; b.Description = p.Description; b.Links = p.Links; b.Image = p.Image; b.DetailFetchedAt = p.DetailFetchedAt; }
 }
 
+// ---- 2b. ゲーム詳細（人数・時間・年齢・価格・発売時期・タグ） ----
+// ゲームの情報はあまり変わらないので、取得済みのものは前回の値を使い、まだのものだけ取りに行く（1回 max-games 件まで）
+if (!opt.NoDetails && opt.MaxGames > 0)
+{
+    var known = new Dictionary<int, GameRef>();
+    foreach (var pb in previous.Values)
+        foreach (var pg in pb.Games)
+            if (pg.FetchedAt is not null) known.TryAdd(pg.Id, pg);
+    var games = order.SelectMany(id => booths[id].Games).ToList();
+    var fetchedNow = new Dictionary<int, GameRef>();
+    int gFetched = 0, gFailed = 0;
+    foreach (var g in games)
+    {
+        if (g.FetchedAt is not null) continue;
+        if (fetchedNow.TryGetValue(g.Id, out var done) || known.TryGetValue(g.Id, out done)) { g.CopyDetail(done); continue; }
+        if (gFetched + gFailed >= opt.MaxGames) continue;
+        try
+        {
+            var html = await Fetch(g.Url);
+            if (gFetched == 0) SaveDebug("game_detail_sample.html", html);
+            Parser.ApplyGame(g, html);
+            g.FetchedAt = DateTimeOffset.UtcNow;
+            fetchedNow[g.Id] = g;
+            gFetched++;
+            if (gFetched % 100 == 0) Console.WriteLine($"  ゲーム詳細 今回取得 {gFetched}");
+        }
+        catch (Exception e) { gFailed++; Console.WriteLine($"  ゲーム詳細取得失敗 {g.Url}: {e.Message}"); }
+    }
+    int left = games.Where(g => g.FetchedAt is null).Select(g => g.Id).Distinct().Count();
+    Console.WriteLine($"ゲーム詳細: 今回 {gFetched} 件取得（失敗 {gFailed}）、未取得 {left} 件");
+}
+
 // ---- 3. 保存 ----
 var data = new BoothData
 {
@@ -183,12 +216,12 @@ void SaveDebug(string name, string html)
 
 // ===============================================================
 
-record Options(string Event, string Out, bool Refresh, bool NoDetails, int DelayMs, int MaxPages, double StaleDays, int MaxRefetch)
+record Options(string Event, string Out, bool Refresh, bool NoDetails, int DelayMs, int MaxPages, double StaleDays, int MaxRefetch, int MaxGames)
 {
     public static Options Parse(string[] a)
     {
         string ev = "2026a", outPath = "docs/data/booths.json";
-        bool refresh = false, noDetails = false; int delay = 700, maxPages = 1000, maxRefetch = 700; double staleDays = 2;
+        bool refresh = false, noDetails = false; int delay = 700, maxPages = 1000, maxRefetch = 700, maxGames = 800; double staleDays = 2;
         for (int i = 0; i < a.Length; i++)
         {
             switch (a[i])
@@ -201,11 +234,12 @@ record Options(string Event, string Out, bool Refresh, bool NoDetails, int Delay
                 case "--max-pages": maxPages = int.Parse(a[++i]); break;
                 case "--stale-days": staleDays = double.Parse(a[++i], System.Globalization.CultureInfo.InvariantCulture); break;
                 case "--max-refetch": maxRefetch = int.Parse(a[++i]); break;
+                case "--max-games": maxGames = int.Parse(a[++i]); break;
                 case "": break;
                 default: throw new ArgumentException($"不明なオプション: {a[i]}");
             }
         }
-        return new Options(ev, outPath, refresh, noDetails, Math.Max(delay, 300), maxPages, staleDays, Math.Max(maxRefetch, 0));
+        return new Options(ev, outPath, refresh, noDetails, Math.Max(delay, 300), maxPages, staleDays, Math.Max(maxRefetch, 0), Math.Max(maxGames, 0));
     }
 }
 
@@ -241,6 +275,31 @@ class GameRef
     public int Id { get; set; }
     public string Title { get; set; } = "";
     public string Url { get; set; } = "";
+    /// <summary>プレイ人数（公式表記のまま。例 "2〜4人"）</summary>
+    public string? Players { get; set; }
+    /// <summary>プレイ時間（例 "30〜60分"）</summary>
+    public string? Time { get; set; }
+    /// <summary>対象年齢（例 "10歳〜"）</summary>
+    public string? Age { get; set; }
+    /// <summary>価格（例 "3,000円"）</summary>
+    public string? Price { get; set; }
+    /// <summary>発売時期（例 "2026秋"。今回のイベントなら新作）</summary>
+    public string? Release { get; set; }
+    /// <summary>予約（"可" / "不可"）</summary>
+    public string? Reserve { get; set; }
+    /// <summary>対戦・協力など</summary>
+    public List<string>? Btype { get; set; }
+    /// <summary>テーマ（現代・ファンタジーなど）</summary>
+    public List<string>? Theme { get; set; }
+    /// <summary>ゲーム体験（スタンダード・キッズ・1～2人用 など）</summary>
+    public List<string>? Exp { get; set; }
+    public DateTimeOffset? FetchedAt { get; set; }
+
+    public void CopyDetail(GameRef o)
+    {
+        Players = o.Players; Time = o.Time; Age = o.Age; Price = o.Price; Release = o.Release; Reserve = o.Reserve;
+        Btype = o.Btype; Theme = o.Theme; Exp = o.Exp; FetchedAt = o.FetchedAt;
+    }
 }
 
 static class Parser
@@ -341,6 +400,47 @@ static class Parser
         if (type?.Contains("土曜") == true || name.Contains("土曜限定")) return "sat";
         if (type?.Contains("日曜") == true || name.Contains("日曜限定")) return "sun";
         return "both";
+    }
+
+    // ゲームページ: <table class="gameStatusDetail"> の th(項目名) と td(値)、<ul class="tag uxTag"> のタグ、「ゲーム体験」の一覧
+    static readonly Regex StatusRow = new(@"<th[^>]*>\s*<span[^>]*>(?<k>[^<]+)</span>\s*</th>\s*<td[^>]*>(?<v>.*?)</td>", RO);
+    static readonly Regex UxTagList = new(@"<ul\s+class\s*=\s*""tag uxTag[^""]*""[^>]*>(?<in>.*?)</ul>", RO);
+    static readonly Regex UxTagItem = new(@"<a\s+href\s*=\s*""[^""]*m_(?<kind>btype|theme)[^""]*""[^>]*>\s*<span>(?<t>[^<]+)</span>", RO);
+    static readonly Regex Experience = new(@"<header\s+class\s*=\s*""experience""[^>]*>.*?</header>(?<in>.*?)(?:<header|<div\s+class\s*=\s*""(?:btn|back|share|sns))", RO);
+
+    public static void ApplyGame(GameRef g, string html)
+    {
+        foreach (Match m in StatusRow.Matches(html))
+        {
+            // 数字のない値（「歳〜」「〜分」など未入力）は空にする。「120〜120分」は「120分」にする
+            string? v = StripTags(m.Groups["v"].Value).Trim();
+            v = Regex.Replace(v, @"^(\d+)〜\1(\D*)$", "$1$2");
+            if (!Regex.IsMatch(v, @"\d") && Decode(m.Groups["k"].Value) is "プレイ人数" or "プレイ時間" or "対象年齢" or "価格") v = null;
+            if (v == "") v = null;
+            switch (Decode(m.Groups["k"].Value))
+            {
+                case "プレイ人数": g.Players = v; break;
+                case "プレイ時間": g.Time = v; break;
+                case "対象年齢": g.Age = v; break;
+                case "価格": g.Price = v; break;
+                case "発売時期": g.Release = v; break;
+                case "予約": g.Reserve = v; break;
+            }
+        }
+        if (UxTagList.Match(html) is { Success: true } ul)
+        {
+            var items = UxTagItem.Matches(ul.Groups["in"].Value).Select(x => (Kind: x.Groups["kind"].Value, T: Decode(x.Groups["t"].Value))).ToList();
+            var bt = items.Where(x => x.Kind == "btype").Select(x => x.T).Distinct().ToList();
+            var th = items.Where(x => x.Kind == "theme").Select(x => x.T).Distinct().ToList();
+            g.Btype = bt.Count > 0 ? bt : null;
+            g.Theme = th.Count > 0 ? th : null;
+        }
+        if (Experience.Match(html) is { Success: true } ex)
+        {
+            var list = StripTags(ex.Groups["in"].Value).Split(new[] { ',', '、', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x.Trim()).Where(x => x != "" && x.Length <= 20).Distinct().ToList();
+            g.Exp = list.Count > 0 ? list : null;
+        }
     }
 
     public static void ApplyDetail(Booth b, string html)
