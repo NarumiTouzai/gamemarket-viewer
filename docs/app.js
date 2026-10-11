@@ -337,6 +337,9 @@
   const mapDayFor = (b) => (b && b.day === "sun" ? 2 : b && b.day === "sat" ? 1 : state.day === "sun" ? 2 : 1);
   const boothNo = (b) => b.number.replace(/^.*?([0-9]+)$/, "$1").replace(/^0+/, "");
 
+  // ★以外を暗くする表示（スポットライト）。端末に保存し、横の地図と全画面の地図の両方に効く
+  let spotlight = store.get("spotlight", false);
+
   // 地図1枚分の表示（一覧の横の地図と、全画面の地図で共用）
   function MapView(p) {
     const el = (s) => document.getElementById(p + s);
@@ -403,13 +406,14 @@
       sc.scrollTop = fy * v.width - py;
     };
 
-    // ★を付けたブースを地図に重ねる。エリア・特設はその区画を黄色い枠で囲み（右上に★）、一般ブースは島を囲んで下に件数を出す。
-    // ✓（行った）にしたものは灰色。位置は地図に対する割合で置くので、拡大・縮小しても付いてくる
+    // ★を付けたブースを地図で強調する。エリア・特設は区画を太い枠で囲み、一般ブースは島を囲んで下に件数を出す
+    // （中は透明なので番号は隠れない）。✓（行った）にしたものは灰色。
+    // spotlight が有効なら、★以外の場所を暗くする（SVG のマスクで★の区画だけ穴をあける）
     v.drawStars = () => {
       let layer = el("Stage").querySelector(".star-layer");
       if (!layer) { layer = document.createElement("div"); layer.className = "star-layer"; el("Stage").append(layer); }
       const pct = (x, w) => `${(x / w) * 100}%`;
-      const islands = new Map();
+      const islands = new Map(), rects = [];
       let html = "";
       for (const b of booths) {
         if (!stars.has(b.id)) continue;
@@ -421,13 +425,19 @@
           islands.set(loc.island, e);
           continue;
         }
-        // 番号が隠れないよう、中は透明のまま枠で囲み、★は右上の角に小さく付ける
         const [x1, y1, x2, y2] = loc.pt ? [loc.pt[0] - 18, loc.pt[1] - 18, loc.pt[0] + 18, loc.pt[1] + 18] : loc.box;
-        html += `<i class="star-ring${done.has(b.id) ? " done" : ""}" style="left:${pct(x1 - 2, M.W)};top:${pct(y1 - 2, M.H)};width:${pct(x2 - x1 + 4, M.W)};height:${pct(y2 - y1 + 4, M.H)}"></i>`;
+        rects.push([x1 - 3, y1 - 3, x2 + 3, y2 + 3]);
+        html += `<i class="star-ring${done.has(b.id) ? " done" : ""}" style="left:${pct(x1 - 3, M.W)};top:${pct(y1 - 3, M.H)};width:${pct(x2 - x1 + 6, M.W)};height:${pct(y2 - y1 + 6, M.H)}"></i>`;
       }
       for (const [, e] of islands) {
         const [x1, y1, x2, y2] = e.box;
-        html += `<i class="star-box${e.left ? "" : " done"}" style="left:${pct(x1 - 4, M.W)};top:${pct(y1 - 4, M.H)};width:${pct(x2 - x1 + 8, M.W)};height:${pct(y2 - y1 + 8, M.H)}"><b>★${e.n}</b></i>`;
+        rects.push([x1 - 4, y1 - 4, x2 + 4, y2 + 4]);
+        html += `<i class="star-box${e.left ? "" : " done"}" style="left:${pct(x1 - 4, M.W)};top:${pct(y1 - 4, M.H)};width:${pct(x2 - x1 + 8, M.W)};height:${pct(y2 - y1 + 8, M.H)}"><b>${e.n}件</b></i>`;
+      }
+      if (spotlight && rects.length) {
+        const id = `spot-${p}`;
+        const holes = rects.map(([x1, y1, x2, y2]) => `<rect x="${x1}" y="${y1}" width="${x2 - x1}" height="${y2 - y1}" rx="4" fill="#000"/>`).join("");
+        html = `<svg class="spot" viewBox="0 0 ${M.W} ${M.H}" preserveAspectRatio="none"><defs><mask id="${id}"><rect width="${M.W}" height="${M.H}" fill="#fff"/>${holes}</mask></defs><rect width="${M.W}" height="${M.H}" fill="rgba(20,24,30,.55)" mask="url(#${id})"/></svg>` + html;
       }
       layer.innerHTML = html;
     };
@@ -640,6 +650,17 @@
   }
   $("#miniIn").addEventListener("click", () => miniZoom(1.5));
   $("#miniOut").addEventListener("click", () => miniZoom(1 / 1.5));
+
+  // 「★だけ」: ★以外を暗くする表示の切り替え（横の地図・全画面の地図で共通）
+  function setSpotlight(on) {
+    spotlight = on;
+    store.set("spotlight", on);
+    document.querySelectorAll(".spot-btn").forEach((x) => x.setAttribute("aria-pressed", String(on)));
+    mini.drawStars();
+    if ($("#mapDlg").open) big.drawStars();
+  }
+  document.querySelectorAll(".spot-btn").forEach((x) => x.addEventListener("click", () => setSpotlight(!spotlight)));
+  document.querySelectorAll(".spot-btn").forEach((x) => x.setAttribute("aria-pressed", String(spotlight)));
 
   $("#miniHide").addEventListener("click", () => setMiniHidden(!miniHidden));
   $("#miniBig").addEventListener("click", () => openMap(current));
