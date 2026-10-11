@@ -425,9 +425,11 @@
           islands.set(loc.island, e);
           continue;
         }
-        const [x1, y1, x2, y2] = loc.pt ? [loc.pt[0] - 18, loc.pt[1] - 18, loc.pt[0] + 18, loc.pt[1] + 18] : loc.box;
-        rects.push([x1 - 3, y1 - 3, x2 + 3, y2 + 3]);
-        html += `<i class="star-ring${done.has(b.id) ? " done" : ""}" style="left:${pct(x1 - 3, M.W)};top:${pct(y1 - 3, M.H)};width:${pct(x2 - x1 + 6, M.W)};height:${pct(y2 - y1 + 6, M.H)}"></i>`;
+        // エリアの小さな区画は約28間隔で並ぶ（17と18など）ので、枠は1区画に収まる幅（26）にして隣と重ならないようにする
+        const [x1, y1, x2, y2] = loc.pt ? [loc.pt[0] - 13, loc.pt[1] - 13, loc.pt[0] + 13, loc.pt[1] + 13] : loc.box;
+        const pad = loc.pt ? 0 : 3;
+        rects.push([x1 - pad, y1 - pad, x2 + pad, y2 + pad]);
+        html += `<i class="star-ring${done.has(b.id) ? " done" : ""}" style="left:${pct(x1 - pad, M.W)};top:${pct(y1 - pad, M.H)};width:${pct(x2 - x1 + pad * 2, M.W)};height:${pct(y2 - y1 + pad * 2, M.H)}"></i>`;
       }
       for (const [, e] of islands) {
         const [x1, y1, x2, y2] = e.box;
