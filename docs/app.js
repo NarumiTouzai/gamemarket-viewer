@@ -432,7 +432,7 @@
       for (const [, e] of islands) {
         const [x1, y1, x2, y2] = e.box;
         rects.push([x1 - 4, y1 - 4, x2 + 4, y2 + 4]);
-        html += `<i class="star-box${e.left ? "" : " done"}" style="left:${pct(x1 - 4, M.W)};top:${pct(y1 - 4, M.H)};width:${pct(x2 - x1 + 8, M.W)};height:${pct(y2 - y1 + 8, M.H)}"><b>${e.n}件</b></i>`;
+        html += `<i class="star-box${e.left ? "" : " done"}" style="left:${pct(x1 - 4, M.W)};top:${pct(y1 - 4, M.H)};width:${pct(x2 - x1 + 8, M.W)};height:${pct(y2 - y1 + 8, M.H)}"><b>★${e.n}</b></i>`;
       }
       if (spotlight && rects.length) {
         const id = `spot-${p}`;
@@ -440,6 +440,8 @@
         html = `<svg class="spot" viewBox="0 0 ${M.W} ${M.H}" preserveAspectRatio="none"><defs><mask id="${id}"><rect width="${M.W}" height="${M.H}" fill="#fff"/>${holes}</mask></defs><rect width="${M.W}" height="${M.H}" fill="rgba(20,24,30,.55)" mask="url(#${id})"/></svg>` + html;
       }
       layer.innerHTML = html;
+      // ★の大きさは地図の表示サイズに合わせる（全体表示の小さい地図で★が大きすぎないように）
+      layer.style.setProperty("--badge", `${Math.round(Math.max(9, Math.min(15, v.width / 80)))}px`);
     };
 
     pinchZoom(el("Scroll"), v);
@@ -489,7 +491,7 @@
     current = b;
     document.querySelectorAll(".card.cur").forEach((c) => c.classList.remove("cur"));
     if (b) document.querySelector(`.card[data-id="${b.id}"]`)?.classList.add("cur");
-    $("#miniTitle").textContent = b ? `${b.number}　${b.name}` : "会場マップ（ブースを押すと赤枠、★は行きたいブース）";
+    $("#miniTitle").textContent = b ? `${b.number}　${b.name}` : "会場マップ（一覧のブースを押すと場所が出ます）";
     if (miniHidden) return;
     const day = mapDayFor(b);
     const loc = b && M.locate(b, day);
