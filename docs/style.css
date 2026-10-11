@@ -369,3 +369,12 @@ dialog textarea { width: 100%; font: 13px/1.5 ui-monospace, monospace; backgroun
 /* ---- ゲームの人数・時間・新作 ---- */
 .games small { margin-left: 5px; font-size: 11px; color: var(--sub); }
 .games .new { margin-right: 4px; font-size: 10px; padding: 0 4px; border-radius: 3px; background: #e3001b; color: #fff; font-weight: 700; }
+
+/* 人数・時間の選択（チップの見た目のプルダウン） */
+.chip.sel { display: inline-flex; align-items: center; gap: 4px; padding-right: 4px; cursor: pointer; }
+.chip.sel select { font: inherit; font-size: 13px; border: 0; background: transparent; color: inherit; padding: 0 2px; cursor: pointer; }
+.chip.sel[aria-pressed="true"] select option { color: var(--ink); background: var(--card); }
+.active-f { border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); border-radius: 999px; padding: 0 8px; font-size: 12px; white-space: nowrap; }
+/* 件数の行は狭い画面では折り返す（ボタンの文字が途中で切れないように） */
+.status { flex-wrap: wrap; row-gap: 4px; }
+.status button, .status .seg button { white-space: nowrap; }

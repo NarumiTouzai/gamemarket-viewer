@@ -47,14 +47,24 @@
         <button class="chip" data-gf="new" aria-pressed="false">🆕 新作あり</button>
         <button class="chip" data-gf="coop" aria-pressed="false">協力</button>
         <button class="chip" data-gf="vs" aria-pressed="false">対戦</button>
-        <button class="chip" data-gf="p2" aria-pressed="false">2人で遊べる</button>
-        <button class="chip" data-gf="p5" aria-pressed="false">5人以上</button>
-        <button class="chip" data-gf="t30" aria-pressed="false">30分以内</button>
+        <label class="chip sel"><span>人数</span>
+          <select id="gfPlayers" aria-label="遊ぶ人数">
+            <option value="">指定なし</option>
+            <option value="1">1人</option><option value="2">2人</option><option value="3">3人</option>
+            <option value="4">4人</option><option value="5">5人</option><option value="6">6人以上</option>
+          </select></label>
+        <label class="chip sel"><span>時間</span>
+          <select id="gfTime" aria-label="遊ぶ時間">
+            <option value="">指定なし</option>
+            <option value="15">15分以内</option><option value="30">30分以内</option>
+            <option value="60">60分以内</option><option value="90">90分以内</option>
+          </select></label>
       </div>
     </div>
 
     <div class="status">
       <span id="count"></span>
+      <button id="activeFilters" class="active-f" type="button" hidden title="ゲームの条件をすべて外す"></button>
       <span id="netState" class="net" hidden>圏外：保存したデータを表示中</span>
       <span class="spacer"></span>
       <div class="seg small" role="radiogroup" aria-label="表示">

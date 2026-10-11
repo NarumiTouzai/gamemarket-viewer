@@ -17,7 +17,7 @@
   const stars = new Set(store.get("stars", []));
   const done = new Set(store.get("done", []));
   const state = Object.assign(
-    { day: "sat", q: "", types: [], onlyStar: false, hideDone: false, onlyGames: false, view: "detail", gf: [] },
+    { day: "sat", q: "", types: [], onlyStar: false, hideDone: false, onlyGames: false, view: "detail", gf: [], players: "", maxTime: "" },
     store.get("filters", {}),
     { q: "" }
   );
@@ -125,7 +125,7 @@
       if (state.onlyStar && !stars.has(b.id)) return false;
       if (state.hideDone && done.has(b.id)) return false;
       if (state.onlyGames && !b.games.length) return false;
-      if (state.gf.length && !b.games.some((g) => state.gf.every((k) => GAME_FILTERS[k](g)))) return false;
+      if (gameFilterOn() && !b.games.some(gameMatches)) return false;
       return terms.every((t) => b.hay.includes(t));
     });
     return { list, terms };
@@ -179,10 +179,17 @@
     new: isNew,
     coop: (g) => (g.btype || []).includes("協力"),
     vs: (g) => (g.btype || []).includes("対戦"),
-    p2: (g) => { const p = span(g.players); return !!p && p.min <= 2 && p.max >= 2; },
-    p5: (g) => { const p = span(g.players); return !!p && p.max >= 5; },
-    t30: (g) => { const t = span(g.time); return !!t && t.max <= 30; },
   };
+  // 以前の版で保存された、今はない条件（2人で遊べる など）は外す
+  state.gf = (state.gf || []).filter((k) => GAME_FILTERS[k]);
+  // 人数: n 人で遊べるか（6 は「6人以上で遊べる」）。時間: 長くても m 分以内か
+  const fitsPlayers = (g, n) => { const p = span(g.players); return !!p && (n >= 6 ? p.max >= 6 : p.min <= n && p.max >= n); };
+  const fitsTime = (g, m) => { const t = span(g.time); return !!t && t.max <= m; };
+  const gameFilterOn = () => state.gf.length || state.players || state.maxTime;
+  // 選んだ条件をすべて満たすゲームか
+  const gameMatches = (g) => state.gf.every((k) => GAME_FILTERS[k](g))
+    && (!state.players || fitsPlayers(g, +state.players))
+    && (!state.maxTime || fitsTime(g, +state.maxTime));
   // ゲーム名の横に出す短い説明（例: 2〜4人・30分・協力）
   const gameMeta = (g) => [g.players, g.time, ...(g.btype || [])].filter(Boolean).join("・");
 
@@ -251,6 +258,11 @@
     $("#list").classList.toggle("compact", state.view === "list");
     $("#jump").innerHTML = jump;
     $("#count").textContent = `${list.length} / ${booths.length} ブース　★${stars.size}　✓${done.size}`;
+    // ゲームの条件が付いているときは、件数の横に出す（スマホでは条件のボタンが横に隠れて見えないため）
+    const GF_LABEL = { new: "新作あり", coop: "協力", vs: "対戦" };
+    const cond = [...state.gf.map((k) => GF_LABEL[k]), state.players && (state.players === "6" ? "6人以上" : state.players + "人"), state.maxTime && state.maxTime + "分以内"].filter(Boolean);
+    $("#activeFilters").hidden = !cond.length;
+    $("#activeFilters").textContent = `条件: ${cond.join("・")} ✕`;
     // 地図に出しているブースが絞り込みで消えたら、地図は全体表示に戻す
     const curCard = current && document.querySelector(`.card[data-id="${current.id}"]`);
     if (curCard) curCard.classList.add("cur");
@@ -297,6 +309,26 @@
       saveFilters(); render();
     });
   });
+
+  // 条件の表示を押したら、ゲームの条件をすべて外す
+  $("#activeFilters").addEventListener("click", () => {
+    state.gf = []; state.players = ""; state.maxTime = "";
+    document.querySelectorAll("[data-gf]").forEach((x) => x.setAttribute("aria-pressed", "false"));
+    for (const id of ["#gfPlayers", "#gfTime"]) { $(id).value = ""; $(id).closest(".chip").setAttribute("aria-pressed", "false"); }
+    saveFilters(); render();
+  });
+
+  // 人数・時間の選択
+  for (const [id, key] of [["#gfPlayers", "players"], ["#gfTime", "maxTime"]]) {
+    const sel = $(id);
+    sel.value = state[key] || "";
+    sel.closest(".chip").setAttribute("aria-pressed", String(!!sel.value));
+    sel.addEventListener("change", () => {
+      state[key] = sel.value;
+      sel.closest(".chip").setAttribute("aria-pressed", String(!!sel.value));
+      saveFilters(); render();
+    });
+  }
 
   $("#types").addEventListener("click", (e) => {
     const btn = e.target.closest("[data-type]");
