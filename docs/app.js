@@ -173,10 +173,11 @@
     const links = (b.links || []).length
       ? `<div class="links">${b.links.map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener" title="${esc(u)}">${esc(linkLabel(u))}</a>`).join("")}</div>`
       : "";
-    // 特設ブースのサムネイル。画像は公式サーバーのものをそのまま表示する（こちらには保存しない）。
-    // 公式には「thumb_」を付けた小さい版があるのでそれを使う。読めなければ枠ごと消す
+    // 特設・エリアブースのサムネイル。画像は公式サーバーのものをそのまま表示する（こちらには保存しない）。
+    // 公式の「thumb_」版は 480×270 に切り抜かれていて絵や文字が欠けるので、元の画像を枠に収めて表示する。
+    // 元の画像が読めなければ thumb_ 版、それも読めなければ枠ごと消す
     const thumb = (b.type === "特設" || b.type === "エリア") && b.image
-      ? `<a class="thumb" href="${esc(b.url)}" target="_blank" rel="noopener"><img loading="lazy" alt="" src="${esc(b.image.replace(/\/([^/]+)$/, "/thumb_$1"))}" onerror="this.parentElement.remove()"></a>`
+      ? `<a class="thumb" href="${esc(b.url)}" target="_blank" rel="noopener"><img loading="lazy" alt="" src="${esc(b.image)}" data-alt="${esc(b.image.replace(/\/([^/]+)$/, "/thumb_$1"))}" onerror="if(this.dataset.alt){this.src=this.dataset.alt;this.dataset.alt=''}else{this.parentElement.remove()}"></a>`
       : "";
     // リスト表示で1行に収める、ゲーム名の要約
     // 特設ブースは「どんな場所か」（specials.js）を出す
@@ -597,6 +598,14 @@
       applyMapSize(); updateBarHeight(); showMini(current, false);
     });
   }
+
+  // 横の地図の ＋／－。枠の真ん中を中心に 1.5 倍ずつ拡大・縮小する
+  function miniZoom(f) {
+    const r = $("#miniScroll").getBoundingClientRect();
+    mini.zoomAt(mini.width * f, r.left + r.width / 2, r.top + r.height / 2);
+  }
+  $("#miniIn").addEventListener("click", () => miniZoom(1.5));
+  $("#miniOut").addEventListener("click", () => miniZoom(1 / 1.5));
 
   $("#miniHide").addEventListener("click", () => setMiniHidden(!miniHidden));
   $("#miniBig").addEventListener("click", () => openMap(current));

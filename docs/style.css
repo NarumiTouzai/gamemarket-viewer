@@ -290,3 +290,5 @@ dialog textarea { width: 100%; font: 13px/1.5 ui-monospace, monospace; backgroun
   border: 1px solid var(--line); border-radius: 4px; color: var(--sub);
 }
 .compact .sum .kind { font-size: 10px; }
+.mini-cap .zoom { width: 30px; padding: 2px 0; font-size: 15px; line-height: 1.2; }
+.mini.closed .zoom { display: none; }
