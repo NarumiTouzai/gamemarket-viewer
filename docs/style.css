@@ -167,11 +167,17 @@ button.map-link { border: 1px solid var(--accent); background: transparent; colo
 .mini-scroll { height: var(--map-h, clamp(140px, 26vh, 320px)); flex: none; }
 /* 地図の大きさを変えるつまみ。スマホは地図の下の横棒、広い画面は地図の左端 */
 .mini-grip {
-  height: 14px; cursor: row-resize; touch-action: none;
-  display: flex; align-items: center; justify-content: center;
+  position: relative; height: 22px; cursor: row-resize; touch-action: none;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: var(--bg); border-top: 1px solid var(--line);
 }
-.mini-grip::before { content: ""; width: 44px; height: 4px; border-radius: 2px; background: var(--line); }
-.mini-grip:hover::before, .mini-grip.dragging::before { background: var(--accent); }
+/* つまみの棒。太く・濃くして「つかめる」と分かるようにし、上下の矢印を添える */
+.grip-bar { position: relative; width: 56px; height: 6px; border-radius: 3px; background: #8a939e; }
+.grip-bar::before, .grip-bar::after { position: absolute; left: 50%; transform: translateX(-50%); font-size: 9px; line-height: 1; color: #8a939e; }
+.grip-bar::before { content: "▲"; top: -10px; }
+.grip-bar::after { content: "▼"; bottom: -10px; }
+.mini-grip:hover .grip-bar, .mini-grip.dragging .grip-bar { background: var(--accent); }
+.grip-hint { font-size: 11px; color: var(--sub); white-space: nowrap; }
 /* 広い画面: 左に一覧、右に地図（画面の高さいっぱいで固定） */
 @media (min-width: 1000px) {
   .layout { display: grid; grid-template-columns: minmax(0, 1fr) var(--map-w, clamp(380px, 40%, 720px)); align-items: start; }
@@ -186,8 +192,11 @@ button.map-link { border: 1px solid var(--accent); background: transparent; colo
   #miniBody { flex: 1; display: flex; flex-direction: column; min-height: 0; }
   #miniBody[hidden] { display: none; }
   .mini-scroll { flex: 1; height: auto; }
-  .mini-grip { position: absolute; left: -6px; top: 0; bottom: 0; width: 12px; height: auto; cursor: col-resize; }
-  .mini-grip::before { width: 4px; height: 44px; }
+  .mini-grip { position: absolute; left: -8px; top: 0; bottom: 0; width: 16px; height: auto; cursor: col-resize; border-top: 0; background: transparent; flex-direction: column; }
+  .grip-bar { width: 6px; height: 56px; }
+  .grip-bar::before { content: "◀"; top: 50%; left: -9px; transform: translateY(-50%); }
+  .grip-bar::after { content: "▶"; top: 50%; bottom: auto; left: auto; right: -9px; transform: translateY(-50%); }
+  .grip-hint { display: none; }
 }
 @media (min-width: 1400px) { .listcol .cards { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 

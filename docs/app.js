@@ -778,6 +778,7 @@
     });
     grip.addEventListener("pointermove", (e) => {
       if (!dragging) return;
+      if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 4) start.moved = true;
       if (wideMQ.matches) {
         sizes.w = Math.round(Math.min(Math.max(start.w - (e.clientX - start.x), 320), window.innerWidth - 360));
       } else {
@@ -789,18 +790,32 @@
       if (!dragging) return;
       dragging = false;
       grip.classList.remove("dragging");
+      // 動かさずに離した＝タップ。小→中→大→小…と切り替える
+      if (!start.moved) cycleSize();
+      gripLearned();
       store.set("mapSize", sizes);
       updateBarHeight();
       showMini(current, false);
     };
     grip.addEventListener("pointerup", end);
     grip.addEventListener("pointercancel", end);
-    // ダブルクリック（ダブルタップ）で元の大きさに戻す
-    grip.addEventListener("dblclick", () => {
-      delete sizes[wideMQ.matches ? "w" : "h"];
-      store.set("mapSize", sizes);
-      applyMapSize(); updateBarHeight(); showMini(current, false);
-    });
+    // タップで切り替える大きさ。スマホは画面の高さに対する割合、広い画面は画面の幅に対する割合
+    function cycleSize() {
+      const wide = wideMQ.matches;
+      const now = wide ? $("#mini").offsetWidth / window.innerWidth : $("#miniScroll").offsetHeight / window.innerHeight;
+      const steps = wide ? [0.3, 0.42, 0.55] : [0.18, 0.28, 0.45];
+      const next = steps.find((x) => x > now + 0.02) ?? steps[0];
+      if (wide) sizes.w = Math.round(window.innerWidth * next);
+      else sizes.h = Math.round(window.innerHeight * next);
+      applyMapSize();
+    }
+    // 最初だけ説明を出し、一度使ったら消す
+    function gripLearned() {
+      if (store.get("gripLearned", false)) return;
+      store.set("gripLearned", true);
+      $("#gripHint").hidden = true;
+    }
+    if (!store.get("gripLearned", false)) $("#gripHint").hidden = false;
   }
 
   // 横の地図の ＋／－。枠の真ん中を中心に 1.5 倍ずつ拡大・縮小する
